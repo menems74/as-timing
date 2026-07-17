@@ -7,6 +7,7 @@ import {
   isInFerie,
   getReparti,
   repartiDiDipendente,
+  isGiornoChiusura,
 } from "./mock-data.js";
 
 const MESI = [
@@ -144,11 +145,18 @@ function buildCellaHtml(dipendenteId, dataISO) {
 
 function renderGrid(days) {
   const dipendenti = getDipendenti();
+  const chiusura = days.map((d) => isGiornoChiusura(d));
 
   const headerCells = days
-    .map((d) => {
+    .map((d, i) => {
       const dow = (d.getDay() + 6) % 7;
-      const cls = isSunday(d) ? "text-red-600" : isWeekend(d) ? "text-slate-500" : "text-slate-600";
+      const cls = chiusura[i]
+        ? "bg-slate-700 text-white"
+        : isSunday(d)
+        ? "text-red-600"
+        : isWeekend(d)
+        ? "text-slate-500"
+        : "text-slate-600";
       return `<th class="px-1 py-2 text-center font-medium ${cls} min-w-[2.75rem]">
         <div class="text-[10px]">${GIORNI_SETT[dow]}</div>
         <div>${d.getDate()}</div>
@@ -159,8 +167,13 @@ function renderGrid(days) {
   const rows = dipendenti
     .map((dip) => {
       const cells = days
-        .map((d) => {
+        .map((d, i) => {
           const iso = toISO(d);
+          if (chiusura[i]) {
+            return `<td class="px-1 py-1">
+              <div class="h-10 rounded bg-slate-700 text-white text-[11px] flex items-center justify-center font-medium" title="Negozio chiuso">Chiuso</div>
+            </td>`;
+          }
           return `<td class="px-1 py-1" data-cell data-dipendente="${dip.id}" data-data="${iso}">
             ${buildCellaHtml(dip.id, iso)}
           </td>`;
@@ -216,6 +229,17 @@ function renderGiorno() {
   const dipendenti = getDipendenti();
   const iso = toISO(state.refDate);
   const turni = getTurni();
+
+  if (isGiornoChiusura(state.refDate)) {
+    content.innerHTML = `
+      <div class="p-10 text-center text-slate-500">
+        <div class="text-4xl mb-2">🔒</div>
+        <p class="font-medium text-slate-700">Il negozio è chiuso in questo giorno.</p>
+        <p class="text-sm mt-1">Nessun turno può essere assegnato (impostazione in Impostazioni → Generali).</p>
+      </div>
+    `;
+    return;
+  }
 
   const cards = dipendenti
     .map((dip) => {
@@ -402,7 +426,7 @@ function setView(view) {
     const active = tab.dataset.view === view;
     tab.classList.toggle("bg-white", active);
     tab.classList.toggle("shadow-sm", active);
-    tab.classList.toggle("text-slate-800", active);
+    tab.classList.toggle("text-teal-700", active);
     tab.classList.toggle("text-slate-500", !active);
   });
   renderCurrentView();

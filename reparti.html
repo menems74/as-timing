@@ -6,7 +6,7 @@
   <title>AS Timing — Reparti</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-slate-100">
+<body class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-teal-50/40">
   <div id="nav-placeholder"></div>
 
   <main class="max-w-6xl mx-auto p-6">
@@ -26,7 +26,7 @@
           <input id="nome-reparto" type="text" required placeholder="es. Cassa"
                  class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500" />
         </div>
-        <button type="submit" class="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700">
+        <button type="submit" class="px-4 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-lg hover:from-teal-500 hover:to-cyan-500 shadow-sm">
           Aggiungi reparto
         </button>
       </form>
@@ -38,7 +38,7 @@
     <section id="reparti-list" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=2"></script>
+  <script type="module" src="./js/nav.js?v=3"></script>
   <script type="module" src="./js/reparti.js"></script>
 </body>
 </html>

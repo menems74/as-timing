@@ -7,6 +7,7 @@ const KEYS = {
   turni: "astiming_turni",
   ferie: "astiming_ferie",
   reparti: "astiming_reparti",
+  impostazioni: "astiming_impostazioni",
 };
 
 export const MAX_REPARTI = 4;
@@ -166,4 +167,40 @@ export function toggleDipendenteReparto(repartoId, dipendenteId) {
 
 export function repartiDiDipendente(dipendenteId) {
   return getReparti().filter((r) => r.dipendentiIds.includes(dipendenteId));
+}
+
+// --- Impostazioni generali ---
+// giornoChiusura: "" (nessuna) oppure "0".."6" (0 = lunedì ... 6 = domenica)
+
+const DEFAULT_REGOLE_ALGORITMO = `Vincoli rigidi:
+- Rispettare tutti i turni pre-assegnati e bloccati manualmente dall'Admin.
+- Garantire a ciascun dipendente esattamente 1 giorno libero a settimana.
+- Rispettare le competenze di reparto (i dipendenti jolly, cioè abilitati su più reparti, possono coprire qualsiasi reparto).
+- Non assegnare mai turni nel giorno libero programmato del dipendente.
+- Nessun turno nel giorno di chiusura settimanale del negozio.
+
+Vincoli di equità mensile:
+- Garantire a ciascun dipendente almeno 2 domeniche libere al mese, distribuendo i turni domenicali in modo equo tra il personale disponibile.
+- Bilanciare le ore totali mensili lavorate in modo che ogni dipendente si avvicini il più possibile al proprio monte ore contrattuale, compensando settimane più cariche con settimane più scariche.`;
+
+const SEED_IMPOSTAZIONI = {
+  giornoChiusura: "",
+  regoleAlgoritmo: DEFAULT_REGOLE_ALGORITMO,
+};
+
+export function getImpostazioni() {
+  return load(KEYS.impostazioni, SEED_IMPOSTAZIONI);
+}
+
+export function updateImpostazioni(patch) {
+  const next = { ...getImpostazioni(), ...patch };
+  save(KEYS.impostazioni, next);
+  return next;
+}
+
+export function isGiornoChiusura(date) {
+  const { giornoChiusura } = getImpostazioni();
+  if (giornoChiusura === "" || giornoChiusura === null || giornoChiusura === undefined) return false;
+  const dow = (date.getDay() + 6) % 7; // 0 = lunedì ... 6 = domenica
+  return dow === Number(giornoChiusura);
 }

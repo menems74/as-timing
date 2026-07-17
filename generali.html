@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AS Timing — Generali</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-teal-50/40">
+  <div id="nav-placeholder"></div>
+
+  <main class="max-w-3xl mx-auto p-6">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold text-slate-800">Impostazioni Generali</h1>
+      <p class="mt-1 text-sm text-slate-500">Parametri validi per l'intero negozio.</p>
+    </header>
+
+    <section class="bg-white rounded-xl shadow p-6 mb-6">
+      <h2 class="text-lg font-semibold text-slate-800 mb-1">Chiusura settimanale del negozio</h2>
+      <p class="text-sm text-slate-500 mb-4">
+        Il giorno scelto verrà mostrato come "Chiuso" nel Calendario Turni e non potrà ricevere turni,
+        né inseriti manualmente né dall'algoritmo automatico.
+      </p>
+      <select id="giorno-chiusura"
+              class="w-full sm:w-64 rounded border-slate-300 focus:border-teal-500 focus:ring-teal-500"></select>
+    </section>
+
+    <section class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-lg font-semibold text-slate-800 mb-1">Regole dell'algoritmo di pianificazione</h2>
+      <p class="text-sm text-slate-500 mb-4">
+        Testo di riferimento con le regole che l'algoritmo automatico dovrà rispettare quando verrà implementato.
+        Puoi modificarlo liberamente.
+      </p>
+      <textarea id="regole" rows="14"
+                class="w-full rounded border-slate-300 focus:border-teal-500 focus:ring-teal-500 font-mono text-sm"></textarea>
+      <div class="mt-3 flex items-center gap-3">
+        <button id="regole-save-btn"
+                class="px-4 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-lg hover:from-teal-500 hover:to-cyan-500 font-medium shadow-sm">
+          Salva regole
+        </button>
+        <span id="regole-saved-msg" class="hidden text-sm text-teal-700 font-medium">Salvato ✓</span>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./js/nav.js?v=3"></script>
+  <script type="module" src="./js/generali.js"></script>
+</body>
+</html>

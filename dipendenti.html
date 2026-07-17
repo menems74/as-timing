@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AS Timing — Anagrafica Dipendenti</title>
+  <title>AS Timing — Dipendenti</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-slate-100">
+<body class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-teal-50/40">
   <div id="nav-placeholder"></div>
 
   <main class="max-w-6xl mx-auto p-6">
     <header class="mb-6">
-      <h1 class="text-2xl font-bold text-slate-800">Anagrafica Dipendenti</h1>
+      <h1 class="text-2xl font-bold text-slate-800">Dipendenti</h1>
       <p class="mt-1 text-sm text-slate-500">Dati di esempio — non ancora collegati al database.</p>
     </header>
 
@@ -54,7 +54,7 @@
 
         <div class="sm:col-span-2 flex gap-2">
           <button type="submit" id="submit-btn"
-                  class="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700">
+                  class="px-4 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-lg hover:from-teal-500 hover:to-cyan-500 shadow-sm">
             Aggiungi
           </button>
           <button type="button" id="cancel-edit-btn"
@@ -82,7 +82,7 @@
     </section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=2"></script>
+  <script type="module" src="./js/nav.js?v=3"></script>
   <script type="module" src="./js/dipendenti.js"></script>
 </body>
 </html>
