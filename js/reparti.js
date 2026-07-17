@@ -5,7 +5,7 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./mock-data.js";
+} from "./mock-data.js?v=5";
 
 const form = document.getElementById("reparto-form");
 const nomeField = document.getElementById("nome-reparto");

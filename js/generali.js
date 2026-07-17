@@ -1,4 +1,4 @@
-import { getImpostazioni, updateImpostazioni } from "./mock-data.js";
+import { getImpostazioni, updateImpostazioni } from "./mock-data.js?v=5";
 
 const GIORNI = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 

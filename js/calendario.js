@@ -9,7 +9,7 @@ import {
   repartiDiDipendente,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js";
+} from "./mock-data.js?v=5";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
