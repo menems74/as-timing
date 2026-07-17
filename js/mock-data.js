@@ -9,7 +9,7 @@ const KEYS = {
   reparti: "astiming_reparti",
 };
 
-export const MAX_REPARTI = 3;
+export const MAX_REPARTI = 4;
 
 function load(key, fallback) {
   const raw = localStorage.getItem(key);

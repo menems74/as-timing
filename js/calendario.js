@@ -1,4 +1,13 @@
-import { getDipendenti, getTurni, setTurno, removeTurno, moveTurno, isInFerie } from "./mock-data.js";
+import {
+  getDipendenti,
+  getTurni,
+  setTurno,
+  removeTurno,
+  moveTurno,
+  isInFerie,
+  getReparti,
+  repartiDiDipendente,
+} from "./mock-data.js";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -77,6 +86,7 @@ const modalForm = document.getElementById("turno-form");
 const modalTipo = document.getElementById("modal-tipo");
 const modalOrario = document.getElementById("modal-orario");
 const modalReparto = document.getElementById("modal-reparto");
+const modalRepartoHint = document.getElementById("modal-reparto-hint");
 const modalBloccato = document.getElementById("modal-bloccato");
 const modalDeleteBtn = document.getElementById("modal-delete-btn");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
@@ -114,7 +124,7 @@ function buildCellaHtml(dipendenteId, dataISO) {
   }
 
   if (!turno) {
-    return `<div class="h-10 rounded border border-dashed border-slate-200 hover:border-slate-400 hover:bg-slate-50 cursor-pointer"></div>`;
+    return `<div class="h-10 rounded border border-dashed border-slate-200 hover:border-slate-400 hover:bg-slate-50 cursor-pointer" title="Doppio click per assegnare un turno"></div>`;
   }
 
   const lockClass = turno.bloccato ? "ring-2 ring-red-400" : "";
@@ -123,7 +133,7 @@ function buildCellaHtml(dipendenteId, dataISO) {
 
   return `
     <div class="h-10 rounded ${TIPO_COLOR[turno.tipo]} ${lockClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none"
-         title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""}"
+         title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""} (doppio click per modificare)"
          draggable="${!turno.bloccato}">
       ${icon}${sigla}
     </div>
@@ -246,7 +256,7 @@ function renderGiorno() {
 
 function attachCellHandlers() {
   content.querySelectorAll("[data-cell]").forEach((cell) => {
-    cell.addEventListener("click", () => openModal(cell.dataset.dipendente, cell.dataset.data));
+    cell.addEventListener("dblclick", () => openModal(cell.dataset.dipendente, cell.dataset.data));
 
     const inner = cell.querySelector("[draggable]");
     if (inner) {
@@ -287,6 +297,37 @@ function attachCellHandlers() {
 
 // --- Modale turno ---
 
+function populateModalReparto(dipendenteId, repartoSelezionato) {
+  let compatibili = repartiDiDipendente(dipendenteId).map((r) => r.nome);
+  const tuttiReparti = getReparti().map((r) => r.nome);
+  let usaFallback = false;
+
+  if (compatibili.length === 0) {
+    compatibili = tuttiReparti;
+    usaFallback = compatibili.length > 0;
+  }
+
+  // Se il turno esistente ha un reparto non più tra quelli compatibili, lo aggiungiamo comunque per non perderlo.
+  if (repartoSelezionato && !compatibili.includes(repartoSelezionato)) {
+    compatibili = [...compatibili, repartoSelezionato];
+  }
+
+  modalReparto.innerHTML =
+    compatibili.length === 0
+      ? `<option value="">Nessun reparto disponibile</option>`
+      : compatibili.map((nome) => `<option value="${nome}">${nome}</option>`).join("");
+
+  modalReparto.value = repartoSelezionato || compatibili[0] || "";
+
+  if (usaFallback) {
+    modalRepartoHint.textContent =
+      "Nessun reparto assegnato a questo dipendente in Impostazioni → Reparti: mostro tutti i reparti disponibili.";
+    modalRepartoHint.classList.remove("hidden");
+  } else {
+    modalRepartoHint.classList.add("hidden");
+  }
+}
+
 function openModal(dipendenteId, dataISO) {
   if (isInFerie(dipendenteId, dataISO)) return;
 
@@ -299,11 +340,12 @@ function openModal(dipendenteId, dataISO) {
   if (turno) {
     modalTipo.value = turno.tipo;
     modalOrario.value = turno.orario || "";
-    modalReparto.value = turno.reparto || "";
+    populateModalReparto(dipendenteId, turno.reparto || "");
     modalBloccato.checked = !!turno.bloccato;
     modalDeleteBtn.classList.remove("hidden");
   } else {
     modalForm.reset();
+    populateModalReparto(dipendenteId, "");
     modalBloccato.checked = false;
     modalDeleteBtn.classList.add("hidden");
   }
