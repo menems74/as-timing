@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AS Timing — Reparti</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100">
+  <div id="nav-placeholder"></div>
+
+  <main class="max-w-6xl mx-auto p-6">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold text-slate-800">Reparti</h1>
+      <p class="mt-1 text-sm text-slate-500">
+        Massimo 3 reparti. Per ogni reparto seleziona i dipendenti abilitati a lavorarci
+        (un dipendente selezionato in tutti i reparti è di fatto un "jolly").
+      </p>
+    </header>
+
+    <section id="new-reparto-section" class="bg-white rounded-xl shadow p-6 mb-6">
+      <h2 class="text-lg font-semibold text-slate-800 mb-4">Nuovo reparto</h2>
+      <form id="reparto-form" class="flex flex-wrap gap-3 items-end">
+        <div class="flex-1 min-w-[12rem]">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Nome reparto</label>
+          <input id="nome-reparto" type="text" required placeholder="es. Cassa"
+                 class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500" />
+        </div>
+        <button type="submit" class="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700">
+          Aggiungi reparto
+        </button>
+      </form>
+      <p id="max-reparti-msg" class="hidden text-sm text-amber-600 mt-3">
+        Hai già raggiunto il numero massimo di 3 reparti. Elimina un reparto per crearne uno nuovo.
+      </p>
+    </section>
+
+    <section id="reparti-list" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></section>
+  </main>
+
+  <script type="module" src="./js/nav.js"></script>
+  <script type="module" src="./js/reparti.js"></script>
+</body>
+</html>

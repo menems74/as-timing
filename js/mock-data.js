@@ -6,7 +6,10 @@ const KEYS = {
   dipendenti: "astiming_dipendenti",
   turni: "astiming_turni",
   ferie: "astiming_ferie",
+  reparti: "astiming_reparti",
 };
+
+export const MAX_REPARTI = 3;
 
 function load(key, fallback) {
   const raw = localStorage.getItem(key);
@@ -115,4 +118,52 @@ export function isInFerie(dipendenteId, dataISO) {
   return getFerie().some(
     (f) => f.dipendenteId === dipendenteId && dataISO >= f.dataInizio && dataISO <= f.dataFine
   );
+}
+
+// --- Reparti ---
+// { id, nome, dipendentiIds: [id, ...] }
+
+const SEED_REPARTI = [];
+
+export function getReparti() {
+  return load(KEYS.reparti, SEED_REPARTI);
+}
+
+export function addReparto(nome) {
+  const list = getReparti();
+  if (list.length >= MAX_REPARTI) return list;
+  list.push({ id: uid(), nome, dipendentiIds: [] });
+  save(KEYS.reparti, list);
+  return list;
+}
+
+export function updateReparto(id, patch) {
+  const list = getReparti().map((r) => (r.id === id ? { ...r, ...patch } : r));
+  save(KEYS.reparti, list);
+  return list;
+}
+
+export function deleteReparto(id) {
+  const list = getReparti().filter((r) => r.id !== id);
+  save(KEYS.reparti, list);
+  return list;
+}
+
+export function toggleDipendenteReparto(repartoId, dipendenteId) {
+  const list = getReparti().map((r) => {
+    if (r.id !== repartoId) return r;
+    const has = r.dipendentiIds.includes(dipendenteId);
+    return {
+      ...r,
+      dipendentiIds: has
+        ? r.dipendentiIds.filter((id) => id !== dipendenteId)
+        : [...r.dipendentiIds, dipendenteId],
+    };
+  });
+  save(KEYS.reparti, list);
+  return list;
+}
+
+export function repartiDiDipendente(dipendenteId) {
+  return getReparti().filter((r) => r.dipendentiIds.includes(dipendenteId));
 }
