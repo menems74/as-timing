@@ -30,9 +30,9 @@ function renderNav() {
   placeholder.innerHTML = `
     <nav class="bg-slate-800 text-white relative">
       <div class="max-w-6xl mx-auto px-4">
-        <div class="flex items-center justify-between h-14">
+        <div class="flex flex-wrap items-center justify-between gap-y-1 py-2 min-h-14">
           <span class="font-bold text-lg">AS Timing</span>
-          <div class="flex gap-1 overflow-x-auto items-center">
+          <div class="flex flex-wrap gap-1 items-center">
             ${LINKS.map((l) => `<a href="${l.href}" class="${linkClass(l.href === active)}">${l.label}</a>`).join("")}
 
             <div class="relative">
