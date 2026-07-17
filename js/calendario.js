@@ -151,7 +151,7 @@ function renderGrid(days) {
     .map((d, i) => {
       const dow = (d.getDay() + 6) % 7;
       const cls = chiusura[i]
-        ? "bg-slate-700 text-white"
+        ? "bg-slate-50 text-slate-400"
         : isSunday(d)
         ? "text-red-600"
         : isWeekend(d)
@@ -171,7 +171,7 @@ function renderGrid(days) {
           const iso = toISO(d);
           if (chiusura[i]) {
             return `<td class="px-1 py-1">
-              <div class="h-10 rounded bg-slate-700 text-white text-[11px] flex items-center justify-center font-medium" title="Negozio chiuso">Chiuso</div>
+              <div class="h-10 rounded border border-dashed border-slate-200 bg-slate-50 text-slate-300 text-[11px] flex items-center justify-center font-medium" title="Negozio chiuso">C</div>
             </td>`;
           }
           return `<td class="px-1 py-1" data-cell data-dipendente="${dip.id}" data-data="${iso}">

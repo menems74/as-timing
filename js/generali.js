@@ -4,8 +4,6 @@ const GIORNI = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sa
 
 const giornoSelect = document.getElementById("giorno-chiusura");
 const regoleField = document.getElementById("regole");
-const regoleSaveBtn = document.getElementById("regole-save-btn");
-const regoleSavedMsg = document.getElementById("regole-saved-msg");
 
 function render() {
   const imp = getImpostazioni();
@@ -16,17 +14,11 @@ function render() {
       (g, i) => `<option value="${i}" ${String(i) === String(imp.giornoChiusura) ? "selected" : ""}>${g}</option>`
     ).join("");
 
-  regoleField.value = imp.regoleAlgoritmo || "";
+  regoleField.textContent = imp.regoleAlgoritmo || "";
 }
 
 giornoSelect.addEventListener("change", () => {
   updateImpostazioni({ giornoChiusura: giornoSelect.value });
-});
-
-regoleSaveBtn.addEventListener("click", () => {
-  updateImpostazioni({ regoleAlgoritmo: regoleField.value });
-  regoleSavedMsg.classList.remove("hidden");
-  setTimeout(() => regoleSavedMsg.classList.add("hidden"), 2000);
 });
 
 render();
