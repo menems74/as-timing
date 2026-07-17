@@ -23,7 +23,7 @@ const GIORNI_SETT_LUNGHI = [
 const TIPO_LABEL = { mattina: "Mattina", pomeriggio: "Pomeriggio", giornata: "Giornata intera", riposo: "Riposo" };
 const TIPO_COLOR = {
   mattina: "bg-sky-200 text-sky-800",
-  pomeriggio: "bg-orange-200 text-orange-800",
+  pomeriggio: "bg-emerald-200 text-emerald-800",
   giornata: "bg-violet-200 text-violet-800",
   riposo: "bg-slate-300 text-slate-700",
 };
@@ -122,7 +122,7 @@ function buildCellaHtml(dipendenteId, dataISO) {
   const inFerie = isInFerie(dipendenteId, dataISO);
 
   if (inFerie) {
-    return `<div class="h-10 rounded bg-emerald-200 text-emerald-800 text-[11px] flex items-center justify-center font-medium" title="Ferie/Permesso">F</div>`;
+    return `<div class="h-10 rounded bg-orange-200 text-orange-800 text-[11px] flex items-center justify-center font-medium" title="Ferie/Permesso">F</div>`;
   }
 
   if (!turno) {
@@ -249,7 +249,7 @@ function renderGiorno() {
 
       let bodyHtml;
       if (inFerie) {
-        bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-emerald-200 text-emerald-800">Ferie/Permesso</span>`;
+        bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-200 text-orange-800">Ferie/Permesso</span>`;
       } else if (turno) {
         bodyHtml = `
           <span class="px-2 py-1 rounded-full text-xs font-medium ${TIPO_COLOR[turno.tipo]}">
