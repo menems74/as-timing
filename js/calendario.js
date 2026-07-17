@@ -1,5 +1,6 @@
 import {
   getDipendenti,
+  getDipendentiTurnabili,
   getTurni,
   setTurno,
   removeTurno,
@@ -9,7 +10,7 @@ import {
   repartiDiDipendente,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=5";
+} from "./mock-data.js?v=6";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -145,7 +146,7 @@ function buildCellaHtml(dipendenteId, dataISO) {
 // --- Vista Mese / Settimana (griglia dipendenti x giorni) ---
 
 function renderGrid(days) {
-  const dipendenti = getDipendenti();
+  const dipendenti = getDipendentiTurnabili();
   const chiusura = days.map((d) => isGiornoChiusura(d));
 
   const headerCells = days
@@ -227,7 +228,7 @@ function renderSettimana() {
 // --- Vista Giorno (card per dipendente) ---
 
 function renderGiorno() {
-  const dipendenti = getDipendenti();
+  const dipendenti = getDipendentiTurnabili();
   const iso = toISO(state.refDate);
   const turni = getTurni();
 

@@ -1,8 +1,9 @@
-import { getImpostazioni, updateImpostazioni } from "./mock-data.js?v=5";
+import { getImpostazioni, updateImpostazioni, getDipendenti } from "./mock-data.js?v=6";
 
 const GIORNI = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
 const giornoSelect = document.getElementById("giorno-chiusura");
+const direttoreSelect = document.getElementById("direttore");
 const regoleField = document.getElementById("regole");
 
 const orarioFields = {
@@ -20,6 +21,16 @@ function render() {
       (g, i) => `<option value="${i}" ${String(i) === String(imp.giornoChiusura) ? "selected" : ""}>${g}</option>`
     ).join("");
 
+  const dipendenti = getDipendenti();
+  direttoreSelect.innerHTML =
+    `<option value="">Nessuno</option>` +
+    dipendenti
+      .map(
+        (d) =>
+          `<option value="${d.id}" ${d.id === imp.direttoreId ? "selected" : ""}>${d.nome} ${d.cognome}</option>`
+      )
+      .join("");
+
   regoleField.textContent = imp.regoleAlgoritmo || "";
 
   Object.entries(orarioFields).forEach(([tipo, el]) => {
@@ -29,6 +40,10 @@ function render() {
 
 giornoSelect.addEventListener("change", () => {
   updateImpostazioni({ giornoChiusura: giornoSelect.value });
+});
+
+direttoreSelect.addEventListener("change", () => {
+  updateImpostazioni({ direttoreId: direttoreSelect.value });
 });
 
 Object.entries(orarioFields).forEach(([tipo, el]) => {

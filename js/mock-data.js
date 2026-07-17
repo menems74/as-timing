@@ -191,6 +191,7 @@ const SEED_IMPOSTAZIONI = {
     pomeriggio: "15:00-19:30",
     giornata: "9:00-19:00",
   },
+  direttoreId: "",
 };
 
 export function getImpostazioni() {
@@ -209,4 +210,14 @@ export function isGiornoChiusura(date) {
   if (giornoChiusura === "" || giornoChiusura === null || giornoChiusura === undefined) return false;
   const dow = (date.getDay() + 6) % 7; // 0 = lunedì ... 6 = domenica
   return dow === Number(giornoChiusura);
+}
+
+export function isDirettore(dipendenteId) {
+  const { direttoreId } = getImpostazioni();
+  return !!direttoreId && direttoreId === dipendenteId;
+}
+
+// Dipendenti da includere nella gestione turni/algoritmo (esclude il Direttore di negozio, sempre presente).
+export function getDipendentiTurnabili() {
+  return getDipendenti().filter((d) => !isDirettore(d.id));
 }
