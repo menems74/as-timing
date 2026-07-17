@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AS Timing — Calendario Turni</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100">
+  <div id="nav-placeholder"></div>
+
+  <main class="max-w-7xl mx-auto p-6">
+    <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">Calendario Turni</h1>
+        <p class="mt-1 text-sm text-slate-500">Dati di esempio — nessun salvataggio su database, algoritmo non ancora attivo.</p>
+      </div>
+      <button id="elabora-btn"
+              class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 font-medium">
+        Elabora Mese
+      </button>
+    </header>
+
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="inline-flex rounded-lg bg-slate-200 p-1">
+        <button data-view="mese" class="view-tab px-4 py-1.5 rounded-md text-sm font-medium">Mese</button>
+        <button data-view="settimana" class="view-tab px-4 py-1.5 rounded-md text-sm font-medium">Settimana</button>
+        <button data-view="giorno" class="view-tab px-4 py-1.5 rounded-md text-sm font-medium">Giorno</button>
+      </div>
+
+      <div class="inline-flex items-center gap-3">
+        <button id="prev-btn" class="px-3 py-1.5 bg-white rounded shadow-sm hover:bg-slate-50">◀</button>
+        <span id="period-label" class="font-medium text-slate-700 min-w-[10rem] text-center"></span>
+        <button id="next-btn" class="px-3 py-1.5 bg-white rounded shadow-sm hover:bg-slate-50">▶</button>
+        <button id="today-btn" class="px-3 py-1.5 bg-white rounded shadow-sm hover:bg-slate-50 text-sm">Oggi</button>
+      </div>
+    </div>
+
+    <div class="mb-4 flex flex-wrap gap-3 text-xs text-slate-600">
+      <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-sky-200 inline-block"></span> Mattina</span>
+      <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-orange-200 inline-block"></span> Pomeriggio</span>
+      <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-violet-200 inline-block"></span> Giornata intera</span>
+      <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-300 inline-block"></span> Riposo</span>
+      <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-200 inline-block"></span> Ferie/Permesso</span>
+      <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-200 inline-block"></span> 🔒 Bloccato</span>
+    </div>
+
+    <section id="calendar-content" class="bg-white rounded-xl shadow"></section>
+  </main>
+
+  <!-- Modal inserimento/modifica turno -->
+  <div id="turno-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
+      <h3 id="modal-title" class="text-lg font-semibold text-slate-800 mb-4">Turno</h3>
+      <form id="turno-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Tipo turno</label>
+          <select id="modal-tipo" class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500">
+            <option value="mattina">Mattina</option>
+            <option value="pomeriggio">Pomeriggio</option>
+            <option value="giornata">Giornata intera</option>
+            <option value="riposo">Riposo</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Orario</label>
+          <input id="modal-orario" type="text" placeholder="es. 9:00-13:00"
+                 class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Reparto</label>
+          <input id="modal-reparto" type="text" placeholder="es. Cassa"
+                 class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500" />
+        </div>
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+          <input id="modal-bloccato" type="checkbox" class="rounded border-slate-300" />
+          Blocca turno (non sovrascrivibile dall'algoritmo)
+        </label>
+
+        <div class="flex justify-between gap-2 pt-2">
+          <button type="button" id="modal-delete-btn"
+                  class="px-3 py-2 text-red-600 text-sm hover:underline hidden">Rimuovi turno</button>
+          <div class="flex gap-2 ml-auto">
+            <button type="button" id="modal-cancel-btn"
+                    class="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300">Annulla</button>
+            <button type="submit"
+                    class="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700">Salva</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="./js/nav.js"></script>
+  <script type="module" src="./js/calendario.js"></script>
+</body>
+</html>
