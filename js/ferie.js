@@ -10,7 +10,7 @@ const tbody = document.getElementById("ferie-tbody");
 
 const TIPO_LABEL = { ferie: "Ferie", permesso: "Permesso" };
 const TIPO_BADGE = {
-  ferie: "bg-emerald-100 text-emerald-700",
+  ferie: "bg-orange-100 text-orange-700",
   permesso: "bg-purple-100 text-purple-700",
 };
 
