@@ -186,10 +186,16 @@ Vincoli di equità mensile:
 const SEED_IMPOSTAZIONI = {
   giornoChiusura: "",
   regoleAlgoritmo: DEFAULT_REGOLE_ALGORITMO,
+  orariDefault: {
+    mattina: "9:00-13:00",
+    pomeriggio: "15:00-19:30",
+    giornata: "9:00-19:00",
+  },
 };
 
 export function getImpostazioni() {
-  return load(KEYS.impostazioni, SEED_IMPOSTAZIONI);
+  const stored = load(KEYS.impostazioni, SEED_IMPOSTAZIONI);
+  return { ...SEED_IMPOSTAZIONI, ...stored, orariDefault: { ...SEED_IMPOSTAZIONI.orariDefault, ...stored.orariDefault } };
 }
 
 export function updateImpostazioni(patch) {

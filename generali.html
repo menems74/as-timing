@@ -25,6 +25,31 @@
               class="w-full sm:w-64 rounded border-slate-300 focus:border-teal-500 focus:ring-teal-500"></select>
     </section>
 
+    <section class="bg-white rounded-xl shadow p-6 mb-6">
+      <h2 class="text-lg font-semibold text-slate-800 mb-1">Orari predefiniti per tipo turno</h2>
+      <p class="text-sm text-slate-500 mb-4">
+        Quando scegli il tipo turno nel Calendario, il campo Orario si precompila con questi valori
+        (resta comunque modificabile per le eccezioni).
+      </p>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Mattina</label>
+          <input id="orario-mattina" type="text" placeholder="es. 9:00-13:00"
+                 class="w-full rounded border-slate-300 focus:border-teal-500 focus:ring-teal-500" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Pomeriggio</label>
+          <input id="orario-pomeriggio" type="text" placeholder="es. 15:00-19:30"
+                 class="w-full rounded border-slate-300 focus:border-teal-500 focus:ring-teal-500" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Giornata intera</label>
+          <input id="orario-giornata" type="text" placeholder="es. 9:00-19:00"
+                 class="w-full rounded border-slate-300 focus:border-teal-500 focus:ring-teal-500" />
+        </div>
+      </div>
+    </section>
+
     <section class="bg-white rounded-xl shadow p-6">
       <h2 class="text-lg font-semibold text-slate-800 mb-1">Regole dell'algoritmo di pianificazione</h2>
       <p class="text-sm text-slate-500 mb-4">
@@ -35,7 +60,7 @@
     </section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=3"></script>
+  <script type="module" src="./js/nav.js?v=4"></script>
   <script type="module" src="./js/generali.js"></script>
 </body>
 </html>

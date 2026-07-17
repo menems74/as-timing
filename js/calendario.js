@@ -8,6 +8,7 @@ import {
   getReparti,
   repartiDiDipendente,
   isGiornoChiusura,
+  getImpostazioni,
 } from "./mock-data.js";
 
 const MESI = [
@@ -370,6 +371,7 @@ function openModal(dipendenteId, dataISO) {
   } else {
     modalForm.reset();
     populateModalReparto(dipendenteId, "");
+    modalOrario.value = orarioDefaultPerTipo(modalTipo.value);
     modalBloccato.checked = false;
     modalDeleteBtn.classList.add("hidden");
   }
@@ -377,6 +379,17 @@ function openModal(dipendenteId, dataISO) {
   modal.classList.remove("hidden");
   modal.classList.add("flex");
 }
+
+function orarioDefaultPerTipo(tipo) {
+  return getImpostazioni().orariDefault[tipo] || "";
+}
+
+modalTipo.addEventListener("change", () => {
+  const isNuovoTurno = modalDeleteBtn.classList.contains("hidden");
+  if (isNuovoTurno) {
+    modalOrario.value = orarioDefaultPerTipo(modalTipo.value);
+  }
+});
 
 function closeModal() {
   modal.classList.add("hidden");

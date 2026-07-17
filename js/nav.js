@@ -1,6 +1,6 @@
 const LINKS = [
   { href: "index.html", label: "Home" },
-  { href: "calendario.html", label: "Calendario Turni" },
+  { href: "calendario.html", label: "Calendario" },
   { href: "ferie.html", label: "Ferie e Permessi" },
 ];
 
@@ -31,7 +31,7 @@ function renderNav() {
   const settingsActive = SETTINGS_LINKS.some((l) => l.href === active);
 
   placeholder.innerHTML = `
-    <nav class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white sticky top-0 z-30 shadow-lg shadow-slate-900/20">
+    <nav class="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-30 shadow-lg shadow-slate-900/20">
       <div class="max-w-6xl mx-auto px-4">
         <div class="flex flex-wrap items-center justify-between gap-y-1 py-2 min-h-14">
           <a href="index.html" class="flex items-center gap-2 shrink-0">
