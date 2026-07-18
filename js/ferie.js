@@ -1,4 +1,4 @@
-import { getDipendenti, getFerie, addFerie, deleteFerie } from "./mock-data.js?v=13";
+import { getDipendenti, getFerie, addFerie, deleteFerie } from "./mock-data.js?v=14";
 
 const form = document.getElementById("ferie-form");
 const dipendenteSelect = document.getElementById("dipendente-id");

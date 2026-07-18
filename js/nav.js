@@ -5,9 +5,9 @@ const LINKS = [
 ];
 
 const SETTINGS_LINKS = [
-  { href: "generali.html", label: "Generali" },
   { href: "dipendenti.html", label: "Dipendenti" },
   { href: "reparti.html", label: "Reparti" },
+  { href: "generali.html", label: "Generali", separator: true },
 ];
 
 function currentPage() {
@@ -49,6 +49,7 @@ function renderNav() {
               <div id="settings-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl ring-1 ring-black/5 overflow-hidden text-slate-700 z-20 py-1">
                 ${SETTINGS_LINKS.map(
                   (l) => `
+                  ${l.separator ? '<div class="my-1 border-t border-slate-100"></div>' : ""}
                   <a href="${l.href}" class="block px-4 py-2.5 text-sm hover:bg-teal-50 hover:text-teal-700 transition-colors ${
                     l.href === active ? "bg-teal-50 text-teal-700 font-medium" : ""
                   }">${l.label}</a>

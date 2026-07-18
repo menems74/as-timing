@@ -11,7 +11,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=13";
+} from "./mock-data.js?v=14";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -157,7 +157,7 @@ function buildCellaHtml(dipendenteId, dataISO) {
   return `
     <div class="h-10 rounded ${tipoClass} ${lockClass} ${dimClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none transition-opacity"
          style="${repartoStyle}"
-         title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""} (doppio click per modificare)"
+         title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""}"
          draggable="${!turno.bloccato}">
       ${icon}${sigla}
     </div>
