@@ -11,7 +11,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=9";
+} from "./mock-data.js?v=10";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -142,16 +142,14 @@ function buildCellaHtml(dipendenteId, dataISO) {
   const sigla = turno.tipo === "riposo" ? "R" : turno.tipo === "giornata" ? "G" : turno.tipo === "pomeriggio" ? "P" : "M";
   const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
   const tipoClass = turno.tipo === "riposo" ? RIPOSO_CLASS : `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
-  const repartoDot = reparto
-    ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background:${reparto.colore}" title="${reparto.nome}"></span>`
-    : "";
+  const repartoStyle = reparto ? `border-left:4px solid ${reparto.colore};` : "";
 
   return `
-    <div class="relative h-10 rounded ${tipoClass} ${lockClass} ${dimClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none transition-opacity"
+    <div class="h-10 rounded ${tipoClass} ${lockClass} ${dimClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none transition-opacity"
+         style="${repartoStyle}"
          title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""} (doppio click per modificare)"
          draggable="${!turno.bloccato}">
       ${icon}${sigla}
-      ${repartoDot}
     </div>
   `;
 }
@@ -266,29 +264,32 @@ function renderGiorno() {
       const dimClass = match ? "" : "opacity-25";
 
       let bodyHtml;
+      let reparto = null;
       if (inFerie) {
         bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-200 text-orange-800 transition-opacity ${dimClass}">Ferie/Permesso</span>`;
       } else if (turno) {
-        const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
-        const repartoDot = reparto
-          ? `<span class="inline-block w-2 h-2 rounded-full" style="background:${reparto.colore}" title="${reparto.nome}"></span>`
-          : "";
+        reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
         const badgeClass = turno.tipo === "riposo" ? RIPOSO_CLASS : `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
         bodyHtml = `
-          <span class="px-2 py-1 rounded-full text-xs font-medium ${badgeClass} transition-opacity ${dimClass} inline-flex items-center gap-1.5">
-            ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}${repartoDot}
+          <span class="px-2 py-1 rounded-full text-xs font-medium ${badgeClass} transition-opacity ${dimClass}">
+            ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}
           </span>
           ${turno.orario ? `<span class="ml-2 text-sm text-slate-500">${turno.orario}</span>` : ""}
-          ${turno.reparto ? `<span class="ml-2 text-sm text-slate-500">· ${turno.reparto}</span>` : ""}
         `;
       } else {
         bodyHtml = `<span class="text-sm text-slate-400 transition-opacity ${dimClass}">Nessun turno</span>`;
       }
 
+      const repartoNome = reparto
+        ? `<span class="ml-2 inline-flex items-center gap-1 text-xs text-slate-500">
+            <span class="w-2 h-2 rounded-full inline-block" style="background:${reparto.colore}"></span>${reparto.nome}
+          </span>`
+        : "";
+
       return `
         <div class="flex items-center justify-between px-4 py-3 ${inFerie ? "" : "cursor-pointer hover:bg-slate-50"}"
              ${inFerie ? "" : `data-cell data-dipendente="${dip.id}" data-data="${iso}"`}>
-          <span class="font-medium text-slate-700">${dip.nome} ${dip.cognome}</span>
+          <span class="font-medium text-slate-700">${dip.nome} ${dip.cognome}${repartoNome}</span>
           <span>${bodyHtml}</span>
         </div>
       `;
@@ -346,30 +347,19 @@ function attachCellHandlers() {
 // --- Modale turno ---
 
 function populateModalReparto(dipendenteId, repartoSelezionato) {
-  let compatibili = repartiDiDipendente(dipendenteId).map((r) => r.nome);
   const tuttiReparti = getReparti().map((r) => r.nome);
-  let usaFallback = false;
-
-  if (compatibili.length === 0) {
-    compatibili = tuttiReparti;
-    usaFallback = compatibili.length > 0;
-  }
-
-  // Se il turno esistente ha un reparto non più tra quelli compatibili, lo aggiungiamo comunque per non perderlo.
-  if (repartoSelezionato && !compatibili.includes(repartoSelezionato)) {
-    compatibili = [...compatibili, repartoSelezionato];
-  }
+  const compatibili = repartiDiDipendente(dipendenteId).map((r) => r.nome);
 
   modalReparto.innerHTML =
-    compatibili.length === 0
+    tuttiReparti.length === 0
       ? `<option value="">Nessun reparto disponibile</option>`
-      : compatibili.map((nome) => `<option value="${nome}">${nome}</option>`).join("");
+      : tuttiReparti.map((nome) => `<option value="${nome}">${nome}</option>`).join("");
 
-  modalReparto.value = repartoSelezionato || compatibili[0] || "";
+  modalReparto.value = repartoSelezionato || compatibili[0] || tuttiReparti[0] || "";
 
-  if (usaFallback) {
+  if (compatibili.length === 0 && tuttiReparti.length > 0) {
     modalRepartoHint.textContent =
-      "Nessun reparto assegnato a questo dipendente in Impostazioni → Reparti: mostro tutti i reparti disponibili.";
+      "Nessun reparto assegnato a questo dipendente in Impostazioni → Reparti: puoi comunque scegliere tra tutti quelli disponibili.";
     modalRepartoHint.classList.remove("hidden");
   } else {
     modalRepartoHint.classList.add("hidden");
