@@ -6,7 +6,7 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./mock-data.js?v=14";
+} from "./mock-data.js?v=15";
 
 const form = document.getElementById("reparto-form");
 const nomeField = document.getElementById("nome-reparto");
@@ -52,7 +52,10 @@ function render() {
             </div>
             <button data-delete="${r.id}" class="text-red-600 hover:underline text-xs">Elimina</button>
           </div>
-          <p class="text-xs text-slate-500 mb-2">Dipendenti abilitati</p>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-slate-500">Dipendenti abilitati</p>
+            ${dipendenti.length === 0 ? "" : `<button data-select-all="${r.id}" class="text-xs text-teal-600 hover:underline">Seleziona tutti</button>`}
+          </div>
           ${dipendenti.length === 0 ? '<p class="text-sm text-slate-400">Nessun dipendente in anagrafica.</p>' : checkboxes}
         </div>
       `;
@@ -71,6 +74,14 @@ list.addEventListener("click", (e) => {
   const delBtn = e.target.closest("button[data-delete]");
   if (delBtn && confirm("Eliminare questo reparto?")) {
     deleteReparto(delBtn.dataset.delete);
+    render();
+    return;
+  }
+
+  const selectAllBtn = e.target.closest("button[data-select-all]");
+  if (selectAllBtn) {
+    const tuttiIds = getDipendenti().map((d) => d.id);
+    updateReparto(selectAllBtn.dataset.selectAll, { dipendentiIds: tuttiIds });
     render();
   }
 });

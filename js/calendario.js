@@ -11,7 +11,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=14";
+} from "./mock-data.js?v=15";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
