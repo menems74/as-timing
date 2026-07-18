@@ -2,14 +2,15 @@ import {
   getDipendenti,
   getReparti,
   addReparto,
+  updateReparto,
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./mock-data.js?v=6";
+} from "./mock-data.js?v=7";
 
 const form = document.getElementById("reparto-form");
 const nomeField = document.getElementById("nome-reparto");
-const newSection = document.getElementById("new-reparto-section");
+const coloreField = document.getElementById("colore-reparto");
 const maxMsg = document.getElementById("max-reparti-msg");
 const list = document.getElementById("reparti-list");
 
@@ -44,7 +45,11 @@ function render() {
       return `
         <div class="bg-white rounded-xl shadow p-5">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-slate-800">${r.nome}</h3>
+            <div class="flex items-center gap-2">
+              <input type="color" data-color="${r.id}" value="${r.colore}"
+                     class="h-6 w-6 rounded cursor-pointer border border-slate-200 p-0" title="Colore identificativo nel calendario" />
+              <h3 class="font-semibold text-slate-800">${r.nome}</h3>
+            </div>
             <button data-delete="${r.id}" class="text-red-600 hover:underline text-xs">Elimina</button>
           </div>
           <p class="text-xs text-slate-500 mb-2">Dipendenti abilitati</p>
@@ -57,7 +62,7 @@ function render() {
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
-  addReparto(nomeField.value.trim());
+  addReparto(nomeField.value.trim(), coloreField.value);
   form.reset();
   render();
 });
@@ -72,8 +77,15 @@ list.addEventListener("click", (e) => {
 
 list.addEventListener("change", (e) => {
   const checkbox = e.target.closest("input[type=checkbox][data-reparto]");
-  if (!checkbox) return;
-  toggleDipendenteReparto(checkbox.dataset.reparto, checkbox.dataset.dipendente);
+  if (checkbox) {
+    toggleDipendenteReparto(checkbox.dataset.reparto, checkbox.dataset.dipendente);
+    return;
+  }
+
+  const colorInput = e.target.closest("input[type=color][data-color]");
+  if (colorInput) {
+    updateReparto(colorInput.dataset.color, { colore: colorInput.value });
+  }
 });
 
 render();

@@ -8,9 +8,10 @@ import {
   isInFerie,
   getReparti,
   repartiDiDipendente,
+  repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=6";
+} from "./mock-data.js?v=7";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -32,6 +33,7 @@ const TIPO_COLOR = {
 const state = {
   view: "mese",
   refDate: new Date(),
+  repartoFiltro: "",
 };
 
 // --- Helpers data ---
@@ -82,6 +84,8 @@ const nextBtn = document.getElementById("next-btn");
 const todayBtn = document.getElementById("today-btn");
 const viewTabs = document.querySelectorAll(".view-tab");
 const elaboraBtn = document.getElementById("elabora-btn");
+const repartoFiltroSelect = document.getElementById("reparto-filtro");
+const repartiLegend = document.getElementById("reparti-legend");
 
 const modal = document.getElementById("turno-modal");
 const modalTitle = document.getElementById("modal-title");
@@ -121,21 +125,27 @@ function buildCellaHtml(dipendenteId, dataISO) {
   const turni = getTurni();
   const turno = turni[`${dipendenteId}_${dataISO}`];
   const inFerie = isInFerie(dipendenteId, dataISO);
+  const filtro = state.repartoFiltro;
+  const match = !filtro || (turno && turno.reparto === filtro);
+  const dimClass = match ? "" : "opacity-25";
 
   if (inFerie) {
-    return `<div class="h-10 rounded bg-orange-200 text-orange-800 text-[11px] flex items-center justify-center font-medium" title="Ferie/Permesso">F</div>`;
+    return `<div class="h-10 rounded bg-orange-200 text-orange-800 text-[11px] flex items-center justify-center font-medium transition-opacity ${dimClass}" title="Ferie/Permesso">F</div>`;
   }
 
   if (!turno) {
-    return `<div class="h-10 rounded border border-dashed border-slate-200 hover:border-slate-400 hover:bg-slate-50 cursor-pointer" title="Doppio click per assegnare un turno"></div>`;
+    return `<div class="h-10 rounded border border-dashed border-slate-200 hover:border-slate-400 hover:bg-slate-50 cursor-pointer transition-opacity ${dimClass}" title="Doppio click per assegnare un turno"></div>`;
   }
 
   const lockClass = turno.bloccato ? "ring-2 ring-red-400" : "";
   const icon = turno.bloccato ? "🔒" : "";
   const sigla = turno.tipo === "riposo" ? "R" : turno.tipo === "giornata" ? "G" : turno.tipo === "pomeriggio" ? "P" : "M";
+  const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
+  const borderStyle = reparto ? `border-left:4px solid ${reparto.colore};` : "";
 
   return `
-    <div class="h-10 rounded ${TIPO_COLOR[turno.tipo]} ${lockClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none"
+    <div class="h-10 rounded ${TIPO_COLOR[turno.tipo]} ${lockClass} ${dimClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none transition-opacity"
+         style="${borderStyle}"
          title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""} (doppio click per modificare)"
          draggable="${!turno.bloccato}">
       ${icon}${sigla}
@@ -248,19 +258,25 @@ function renderGiorno() {
       const inFerie = isInFerie(dip.id, iso);
       const turno = turni[`${dip.id}_${iso}`];
 
+      const filtro = state.repartoFiltro;
+      const match = !filtro || (turno && turno.reparto === filtro);
+      const dimClass = match ? "" : "opacity-25";
+
       let bodyHtml;
       if (inFerie) {
-        bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-200 text-orange-800">Ferie/Permesso</span>`;
+        bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-200 text-orange-800 transition-opacity ${dimClass}">Ferie/Permesso</span>`;
       } else if (turno) {
+        const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
+        const borderStyle = reparto ? `border-left:4px solid ${reparto.colore}; padding-left:6px;` : "";
         bodyHtml = `
-          <span class="px-2 py-1 rounded-full text-xs font-medium ${TIPO_COLOR[turno.tipo]}">
+          <span class="px-2 py-1 rounded-full text-xs font-medium ${TIPO_COLOR[turno.tipo]} transition-opacity ${dimClass}" style="${borderStyle}">
             ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}
           </span>
           ${turno.orario ? `<span class="ml-2 text-sm text-slate-500">${turno.orario}</span>` : ""}
           ${turno.reparto ? `<span class="ml-2 text-sm text-slate-500">· ${turno.reparto}</span>` : ""}
         `;
       } else {
-        bodyHtml = `<span class="text-sm text-slate-400">Nessun turno</span>`;
+        bodyHtml = `<span class="text-sm text-slate-400 transition-opacity ${dimClass}">Nessun turno</span>`;
       }
 
       return `
@@ -473,6 +489,32 @@ elaboraBtn.addEventListener("click", () => {
   );
 });
 
+// --- Filtro e legenda reparti ---
+
+function populateRepartiUI() {
+  const reparti = getReparti();
+
+  repartoFiltroSelect.innerHTML =
+    `<option value="">Tutti</option>` +
+    reparti.map((r) => `<option value="${r.nome}">${r.nome}</option>`).join("");
+
+  repartiLegend.innerHTML = reparti
+    .map(
+      (r) => `
+      <span class="inline-flex items-center gap-1">
+        <span class="w-3 h-3 rounded-sm inline-block" style="background:${r.colore}"></span> ${r.nome}
+      </span>
+    `
+    )
+    .join("");
+}
+
+repartoFiltroSelect.addEventListener("change", () => {
+  state.repartoFiltro = repartoFiltroSelect.value;
+  renderCurrentView();
+});
+
 // --- Avvio ---
 
+populateRepartiUI();
 setView("mese");

@@ -122,7 +122,7 @@ export function isInFerie(dipendenteId, dataISO) {
 }
 
 // --- Reparti ---
-// { id, nome, dipendentiIds: [id, ...] }
+// { id, nome, colore, dipendentiIds: [id, ...] }
 
 const SEED_REPARTI = [];
 
@@ -130,10 +130,10 @@ export function getReparti() {
   return load(KEYS.reparti, SEED_REPARTI);
 }
 
-export function addReparto(nome) {
+export function addReparto(nome, colore) {
   const list = getReparti();
   if (list.length >= MAX_REPARTI) return list;
-  list.push({ id: uid(), nome, dipendentiIds: [] });
+  list.push({ id: uid(), nome, colore: colore || "#0d9488", dipendentiIds: [] });
   save(KEYS.reparti, list);
   return list;
 }
@@ -167,6 +167,10 @@ export function toggleDipendenteReparto(repartoId, dipendenteId) {
 
 export function repartiDiDipendente(dipendenteId) {
   return getReparti().filter((r) => r.dipendentiIds.includes(dipendenteId));
+}
+
+export function repartoByNome(nome) {
+  return getReparti().find((r) => r.nome === nome);
 }
 
 // --- Impostazioni generali ---
