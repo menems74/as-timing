@@ -11,7 +11,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=10";
+} from "./mock-data.js?v=11";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -142,7 +142,7 @@ function buildCellaHtml(dipendenteId, dataISO) {
   const sigla = turno.tipo === "riposo" ? "R" : turno.tipo === "giornata" ? "G" : turno.tipo === "pomeriggio" ? "P" : "M";
   const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
   const tipoClass = turno.tipo === "riposo" ? RIPOSO_CLASS : `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
-  const repartoStyle = reparto ? `border-left:4px solid ${reparto.colore};` : "";
+  const repartoStyle = reparto ? `border-left:8px solid ${reparto.colore};` : "";
 
   return `
     <div class="h-10 rounded ${tipoClass} ${lockClass} ${dimClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none transition-opacity"
