@@ -11,7 +11,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=7";
+} from "./mock-data.js?v=8";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -153,10 +153,46 @@ function buildCellaHtml(dipendenteId, dataISO) {
   `;
 }
 
+// --- Copertura reparti (usata nell'intestazione dei giorni) ---
+
+function coperturaReparto(reparto, iso, dipendenti) {
+  const turni = getTurni();
+  let mattina = false;
+  let pomeriggio = false;
+  for (const dip of dipendenti) {
+    const turno = turni[`${dip.id}_${iso}`];
+    if (!turno || turno.reparto !== reparto.nome) continue;
+    if (turno.tipo === "mattina" || turno.tipo === "giornata") mattina = true;
+    if (turno.tipo === "pomeriggio" || turno.tipo === "giornata") pomeriggio = true;
+  }
+  return { mattina, pomeriggio };
+}
+
+function coperturaDotsHtml(iso, dipendenti, reparti) {
+  if (reparti.length === 0) return "";
+  return `
+    <div class="flex items-center justify-center gap-0.5 mt-1">
+      ${reparti
+        .map((r) => {
+          const cov = coperturaReparto(r, iso, dipendenti);
+          const bg = `linear-gradient(to right, ${cov.mattina ? r.colore : "transparent"} 50%, ${
+            cov.pomeriggio ? r.colore : "transparent"
+          } 50%)`;
+          return `<span class="inline-block w-2.5 h-2.5 rounded-sm" style="border:1px solid ${r.colore}; background:${bg}"
+                        title="${r.nome} — mattina ${cov.mattina ? "coperta" : "scoperta"}, pomeriggio ${
+            cov.pomeriggio ? "coperta" : "scoperta"
+          }"></span>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 // --- Vista Mese / Settimana (griglia dipendenti x giorni) ---
 
 function renderGrid(days) {
   const dipendenti = getDipendentiTurnabili();
+  const reparti = getReparti();
   const chiusura = days.map((d) => isGiornoChiusura(d));
 
   const headerCells = days
@@ -169,9 +205,11 @@ function renderGrid(days) {
         : isWeekend(d)
         ? "text-slate-500"
         : "text-slate-600";
+      const dots = chiusura[i] ? "" : coperturaDotsHtml(toISO(d), dipendenti, reparti);
       return `<th class="px-1 py-2 text-center font-medium ${cls} min-w-[2.75rem]">
         <div class="text-[10px]">${GIORNI_SETT[dow]}</div>
         <div>${d.getDate()}</div>
+        ${dots}
       </th>`;
     })
     .join("");
@@ -289,7 +327,31 @@ function renderGiorno() {
     })
     .join("");
 
-  content.innerHTML = `<div class="divide-y divide-slate-100">${cards}</div>`;
+  const reparti = getReparti();
+  const riepilogoHtml =
+    reparti.length === 0
+      ? ""
+      : `
+    <div class="flex flex-wrap gap-4 px-4 py-3 bg-slate-50 border-b border-slate-100 text-xs text-slate-600">
+      ${reparti
+        .map((r) => {
+          const cov = coperturaReparto(r, iso, dipendenti);
+          const bg = `linear-gradient(to right, ${cov.mattina ? r.colore : "transparent"} 50%, ${
+            cov.pomeriggio ? r.colore : "transparent"
+          } 50%)`;
+          return `
+          <span class="inline-flex items-center gap-1.5">
+            <span class="inline-block w-2.5 h-2.5 rounded-sm" style="border:1px solid ${r.colore}; background:${bg}"></span>
+            ${r.nome}
+            <span class="text-slate-400">(mattina ${cov.mattina ? "✓" : "✗"}, pomeriggio ${cov.pomeriggio ? "✓" : "✗"})</span>
+          </span>
+        `;
+        })
+        .join("")}
+    </div>
+  `;
+
+  content.innerHTML = `${riepilogoHtml}<div class="divide-y divide-slate-100">${cards}</div>`;
 
   attachCellHandlers();
 }
