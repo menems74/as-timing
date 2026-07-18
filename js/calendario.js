@@ -11,7 +11,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=12";
+} from "./mock-data.js?v=13";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -22,14 +22,13 @@ const GIORNI_SETT_LUNGHI = [
   "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica",
 ];
 
-const TIPO_LABEL = { mattina: "Mattina", pomeriggio: "Pomeriggio", giornata: "Giornata intera", riposo: "Riposo" };
-// Mattina/Pomeriggio/Giornata: solo bordo colorato, sfondo neutro. Riposo resta pieno.
+const TIPO_LABEL = { mattina: "Mattina", pomeriggio: "Pomeriggio", giornata: "Giornata intera" };
+// Solo bordo colorato, sfondo neutro.
 const TIPO_BORDER = {
   mattina: "border-sky-400 text-sky-700",
   pomeriggio: "border-emerald-400 text-emerald-700",
   giornata: "border-violet-400 text-violet-700",
 };
-const RIPOSO_CLASS = "bg-slate-300 text-slate-700 border-transparent";
 
 const state = {
   view: "mese",
@@ -79,6 +78,17 @@ function isSunday(date) {
 // --- Elementi DOM ---
 
 const content = document.getElementById("calendar-content");
+
+// Mantiene la posizione di scroll orizzontale della griglia quando si ri-renderizza
+// (es. dopo aver salvato un turno), evitando di tornare all'inizio del mese.
+function setContentHtml(html) {
+  const prevScroller = content.querySelector(".overflow-x-auto");
+  const scrollLeft = prevScroller ? prevScroller.scrollLeft : 0;
+  content.innerHTML = html;
+  const newScroller = content.querySelector(".overflow-x-auto");
+  if (newScroller) newScroller.scrollLeft = scrollLeft;
+}
+
 const periodLabel = document.getElementById("period-label");
 const prevBtn = document.getElementById("prev-btn");
 const nextBtn = document.getElementById("next-btn");
@@ -139,9 +149,9 @@ function buildCellaHtml(dipendenteId, dataISO) {
 
   const lockClass = turno.bloccato ? "ring-2 ring-red-400" : "";
   const icon = turno.bloccato ? "🔒" : "";
-  const sigla = turno.tipo === "riposo" ? "R" : turno.tipo === "giornata" ? "G" : turno.tipo === "pomeriggio" ? "P" : "M";
+  const sigla = turno.tipo === "giornata" ? "G" : turno.tipo === "pomeriggio" ? "P" : "M";
   const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
-  const tipoClass = turno.tipo === "riposo" ? RIPOSO_CLASS : `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
+  const tipoClass = `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
   const repartoStyle = reparto ? `border-left:8px solid ${reparto.colore};` : "";
 
   return `
@@ -203,7 +213,7 @@ function renderGrid(days) {
     })
     .join("");
 
-  content.innerHTML = `
+  setContentHtml(`
     <div class="overflow-x-auto">
       <table class="min-w-full text-sm border-collapse">
         <thead class="bg-slate-50">
@@ -217,7 +227,7 @@ function renderGrid(days) {
         </tbody>
       </table>
     </div>
-  `;
+  `);
 
   attachCellHandlers();
 }
@@ -240,20 +250,23 @@ function renderSettimana() {
 
 function contaCopertura(reparto, iso, dipendenti) {
   const turni = getTurni();
-  let mattina = 0;
-  let pomeriggio = 0;
+  const mattina = [];
+  const pomeriggio = [];
   for (const dip of dipendenti) {
     const turno = turni[`${dip.id}_${iso}`];
     if (!turno || turno.reparto !== reparto.nome) continue;
-    if (turno.tipo === "mattina" || turno.tipo === "giornata") mattina++;
-    if (turno.tipo === "pomeriggio" || turno.tipo === "giornata") pomeriggio++;
+    const nome = `${dip.nome} ${dip.cognome}`;
+    if (turno.tipo === "mattina" || turno.tipo === "giornata") mattina.push(nome);
+    if (turno.tipo === "pomeriggio" || turno.tipo === "giornata") pomeriggio.push(nome);
   }
   return { mattina, pomeriggio };
 }
 
-function contaCellaHtml(count, colore) {
+function contaCellaHtml(nomi, colore) {
+  const count = nomi.length;
   const style = count === 0 ? "background:#fef2f2;color:#dc2626;" : `background:${colore}22;color:#1e293b;`;
-  return `<div class="h-10 rounded flex items-center justify-center text-sm font-semibold" style="${style}">${count}</div>`;
+  const title = count === 0 ? "Nessun dipendente" : nomi.join(", ");
+  return `<div class="h-10 rounded flex items-center justify-center text-sm font-semibold cursor-default" style="${style}" title="${title}">${count}</div>`;
 }
 
 function chiusaCellaHtml() {
@@ -270,7 +283,7 @@ function renderAnalisiReparti() {
   const reparti = getReparti().filter((r) => !state.repartoFiltro || r.nome === state.repartoFiltro);
 
   if (reparti.length === 0) {
-    content.innerHTML = `<div class="p-10 text-center text-slate-500">Nessun reparto configurato (Impostazioni → Reparti).</div>`;
+    setContentHtml(`<div class="p-10 text-center text-slate-500">Nessun reparto configurato (Impostazioni → Reparti).</div>`);
     return;
   }
 
@@ -322,7 +335,7 @@ function renderAnalisiReparti() {
     })
     .join("");
 
-  content.innerHTML = `
+  setContentHtml(`
     <div class="overflow-x-auto">
       <table class="min-w-full text-sm border-collapse">
         <thead class="bg-slate-50">
@@ -336,7 +349,7 @@ function renderAnalisiReparti() {
         </tbody>
       </table>
     </div>
-  `;
+  `);
 }
 
 // --- Vista Giorno (card per dipendente) ---
@@ -347,13 +360,13 @@ function renderGiorno() {
   const turni = getTurni();
 
   if (isGiornoChiusura(state.refDate)) {
-    content.innerHTML = `
+    setContentHtml(`
       <div class="p-10 text-center text-slate-500">
         <div class="text-4xl mb-2">🔒</div>
         <p class="font-medium text-slate-700">Il negozio è chiuso in questo giorno.</p>
         <p class="text-sm mt-1">Nessun turno può essere assegnato (impostazione in Impostazioni → Generali).</p>
       </div>
-    `;
+    `);
     return;
   }
 
@@ -372,7 +385,7 @@ function renderGiorno() {
         bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-200 text-orange-800 transition-opacity ${dimClass}">Ferie/Permesso</span>`;
       } else if (turno) {
         reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
-        const badgeClass = turno.tipo === "riposo" ? RIPOSO_CLASS : `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
+        const badgeClass = `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
         bodyHtml = `
           <span class="px-2 py-1 rounded-full text-xs font-medium ${badgeClass} transition-opacity ${dimClass}">
             ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}
@@ -399,7 +412,7 @@ function renderGiorno() {
     })
     .join("");
 
-  content.innerHTML = `<div class="divide-y divide-slate-100">${cards}</div>`;
+  setContentHtml(`<div class="divide-y divide-slate-100">${cards}</div>`);
 
   attachCellHandlers();
 }
