@@ -11,7 +11,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=8";
+} from "./mock-data.js?v=9";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -23,12 +23,13 @@ const GIORNI_SETT_LUNGHI = [
 ];
 
 const TIPO_LABEL = { mattina: "Mattina", pomeriggio: "Pomeriggio", giornata: "Giornata intera", riposo: "Riposo" };
-const TIPO_COLOR = {
-  mattina: "bg-sky-200 text-sky-800",
-  pomeriggio: "bg-emerald-200 text-emerald-800",
-  giornata: "bg-violet-200 text-violet-800",
-  riposo: "bg-slate-300 text-slate-700",
+// Mattina/Pomeriggio/Giornata: solo bordo colorato, sfondo neutro. Riposo resta pieno.
+const TIPO_BORDER = {
+  mattina: "border-sky-400 text-sky-700",
+  pomeriggio: "border-emerald-400 text-emerald-700",
+  giornata: "border-violet-400 text-violet-700",
 };
+const RIPOSO_CLASS = "bg-slate-300 text-slate-700 border-transparent";
 
 const state = {
   view: "mese",
@@ -85,7 +86,6 @@ const todayBtn = document.getElementById("today-btn");
 const viewTabs = document.querySelectorAll(".view-tab");
 const elaboraBtn = document.getElementById("elabora-btn");
 const repartoFiltroSelect = document.getElementById("reparto-filtro");
-const repartiLegend = document.getElementById("reparti-legend");
 
 const modal = document.getElementById("turno-modal");
 const modalTitle = document.getElementById("modal-title");
@@ -141,49 +141,17 @@ function buildCellaHtml(dipendenteId, dataISO) {
   const icon = turno.bloccato ? "🔒" : "";
   const sigla = turno.tipo === "riposo" ? "R" : turno.tipo === "giornata" ? "G" : turno.tipo === "pomeriggio" ? "P" : "M";
   const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
-  const borderStyle = reparto ? `border-left:4px solid ${reparto.colore};` : "";
+  const tipoClass = turno.tipo === "riposo" ? RIPOSO_CLASS : `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
+  const repartoDot = reparto
+    ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style="background:${reparto.colore}" title="${reparto.nome}"></span>`
+    : "";
 
   return `
-    <div class="h-10 rounded ${TIPO_COLOR[turno.tipo]} ${lockClass} ${dimClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none transition-opacity"
-         style="${borderStyle}"
+    <div class="relative h-10 rounded ${tipoClass} ${lockClass} ${dimClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none transition-opacity"
          title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""} (doppio click per modificare)"
          draggable="${!turno.bloccato}">
       ${icon}${sigla}
-    </div>
-  `;
-}
-
-// --- Copertura reparti (usata nell'intestazione dei giorni) ---
-
-function coperturaReparto(reparto, iso, dipendenti) {
-  const turni = getTurni();
-  let mattina = false;
-  let pomeriggio = false;
-  for (const dip of dipendenti) {
-    const turno = turni[`${dip.id}_${iso}`];
-    if (!turno || turno.reparto !== reparto.nome) continue;
-    if (turno.tipo === "mattina" || turno.tipo === "giornata") mattina = true;
-    if (turno.tipo === "pomeriggio" || turno.tipo === "giornata") pomeriggio = true;
-  }
-  return { mattina, pomeriggio };
-}
-
-function coperturaDotsHtml(iso, dipendenti, reparti) {
-  if (reparti.length === 0) return "";
-  return `
-    <div class="flex items-center justify-center gap-0.5 mt-1">
-      ${reparti
-        .map((r) => {
-          const cov = coperturaReparto(r, iso, dipendenti);
-          const bg = `linear-gradient(to right, ${cov.mattina ? r.colore : "transparent"} 50%, ${
-            cov.pomeriggio ? r.colore : "transparent"
-          } 50%)`;
-          return `<span class="inline-block w-2.5 h-2.5 rounded-sm" style="border:1px solid ${r.colore}; background:${bg}"
-                        title="${r.nome} — mattina ${cov.mattina ? "coperta" : "scoperta"}, pomeriggio ${
-            cov.pomeriggio ? "coperta" : "scoperta"
-          }"></span>`;
-        })
-        .join("")}
+      ${repartoDot}
     </div>
   `;
 }
@@ -192,7 +160,6 @@ function coperturaDotsHtml(iso, dipendenti, reparti) {
 
 function renderGrid(days) {
   const dipendenti = getDipendentiTurnabili();
-  const reparti = getReparti();
   const chiusura = days.map((d) => isGiornoChiusura(d));
 
   const headerCells = days
@@ -205,11 +172,9 @@ function renderGrid(days) {
         : isWeekend(d)
         ? "text-slate-500"
         : "text-slate-600";
-      const dots = chiusura[i] ? "" : coperturaDotsHtml(toISO(d), dipendenti, reparti);
       return `<th class="px-1 py-2 text-center font-medium ${cls} min-w-[2.75rem]">
         <div class="text-[10px]">${GIORNI_SETT[dow]}</div>
         <div>${d.getDate()}</div>
-        ${dots}
       </th>`;
     })
     .join("");
@@ -305,10 +270,13 @@ function renderGiorno() {
         bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-200 text-orange-800 transition-opacity ${dimClass}">Ferie/Permesso</span>`;
       } else if (turno) {
         const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
-        const borderStyle = reparto ? `border-left:4px solid ${reparto.colore}; padding-left:6px;` : "";
+        const repartoDot = reparto
+          ? `<span class="inline-block w-2 h-2 rounded-full" style="background:${reparto.colore}" title="${reparto.nome}"></span>`
+          : "";
+        const badgeClass = turno.tipo === "riposo" ? RIPOSO_CLASS : `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
         bodyHtml = `
-          <span class="px-2 py-1 rounded-full text-xs font-medium ${TIPO_COLOR[turno.tipo]} transition-opacity ${dimClass}" style="${borderStyle}">
-            ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}
+          <span class="px-2 py-1 rounded-full text-xs font-medium ${badgeClass} transition-opacity ${dimClass} inline-flex items-center gap-1.5">
+            ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}${repartoDot}
           </span>
           ${turno.orario ? `<span class="ml-2 text-sm text-slate-500">${turno.orario}</span>` : ""}
           ${turno.reparto ? `<span class="ml-2 text-sm text-slate-500">· ${turno.reparto}</span>` : ""}
@@ -327,31 +295,7 @@ function renderGiorno() {
     })
     .join("");
 
-  const reparti = getReparti();
-  const riepilogoHtml =
-    reparti.length === 0
-      ? ""
-      : `
-    <div class="flex flex-wrap gap-4 px-4 py-3 bg-slate-50 border-b border-slate-100 text-xs text-slate-600">
-      ${reparti
-        .map((r) => {
-          const cov = coperturaReparto(r, iso, dipendenti);
-          const bg = `linear-gradient(to right, ${cov.mattina ? r.colore : "transparent"} 50%, ${
-            cov.pomeriggio ? r.colore : "transparent"
-          } 50%)`;
-          return `
-          <span class="inline-flex items-center gap-1.5">
-            <span class="inline-block w-2.5 h-2.5 rounded-sm" style="border:1px solid ${r.colore}; background:${bg}"></span>
-            ${r.nome}
-            <span class="text-slate-400">(mattina ${cov.mattina ? "✓" : "✗"}, pomeriggio ${cov.pomeriggio ? "✓" : "✗"})</span>
-          </span>
-        `;
-        })
-        .join("")}
-    </div>
-  `;
-
-  content.innerHTML = `${riepilogoHtml}<div class="divide-y divide-slate-100">${cards}</div>`;
+  content.innerHTML = `<div class="divide-y divide-slate-100">${cards}</div>`;
 
   attachCellHandlers();
 }
@@ -559,16 +503,6 @@ function populateRepartiUI() {
   repartoFiltroSelect.innerHTML =
     `<option value="">Tutti</option>` +
     reparti.map((r) => `<option value="${r.nome}">${r.nome}</option>`).join("");
-
-  repartiLegend.innerHTML = reparti
-    .map(
-      (r) => `
-      <span class="inline-flex items-center gap-1">
-        <span class="w-3 h-3 rounded-sm inline-block" style="background:${r.colore}"></span> ${r.nome}
-      </span>
-    `
-    )
-    .join("");
 }
 
 repartoFiltroSelect.addEventListener("change", () => {
