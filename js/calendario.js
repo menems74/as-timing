@@ -11,7 +11,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=11";
+} from "./mock-data.js?v=12";
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -104,7 +104,7 @@ let dragSource = null; // { dipendenteId, dataISO }
 // --- Rendering label periodo ---
 
 function updatePeriodLabel() {
-  if (state.view === "mese") {
+  if (state.view === "mese" || state.view === "analisi") {
     periodLabel.textContent = `${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}`;
   } else if (state.view === "settimana") {
     const start = startOfWeek(state.refDate);
@@ -234,6 +234,109 @@ function renderSettimana() {
   const start = startOfWeek(state.refDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   renderGrid(days);
+}
+
+// --- Vista Analisi Reparti (conteggio dipendenti per reparto/turno) ---
+
+function contaCopertura(reparto, iso, dipendenti) {
+  const turni = getTurni();
+  let mattina = 0;
+  let pomeriggio = 0;
+  for (const dip of dipendenti) {
+    const turno = turni[`${dip.id}_${iso}`];
+    if (!turno || turno.reparto !== reparto.nome) continue;
+    if (turno.tipo === "mattina" || turno.tipo === "giornata") mattina++;
+    if (turno.tipo === "pomeriggio" || turno.tipo === "giornata") pomeriggio++;
+  }
+  return { mattina, pomeriggio };
+}
+
+function contaCellaHtml(count, colore) {
+  const style = count === 0 ? "background:#fef2f2;color:#dc2626;" : `background:${colore}22;color:#1e293b;`;
+  return `<div class="h-10 rounded flex items-center justify-center text-sm font-semibold" style="${style}">${count}</div>`;
+}
+
+function chiusaCellaHtml() {
+  return `<div class="h-10 rounded border border-dashed border-slate-200 bg-slate-50 text-slate-300 text-[11px] flex items-center justify-center font-medium">C</div>`;
+}
+
+function renderAnalisiReparti() {
+  const year = state.refDate.getFullYear();
+  const month = state.refDate.getMonth();
+  const total = daysInMonth(state.refDate);
+  const days = Array.from({ length: total }, (_, i) => new Date(year, month, i + 1));
+  const chiusura = days.map((d) => isGiornoChiusura(d));
+  const dipendenti = getDipendentiTurnabili();
+  const reparti = getReparti().filter((r) => !state.repartoFiltro || r.nome === state.repartoFiltro);
+
+  if (reparti.length === 0) {
+    content.innerHTML = `<div class="p-10 text-center text-slate-500">Nessun reparto configurato (Impostazioni → Reparti).</div>`;
+    return;
+  }
+
+  const headerCells = days
+    .map((d, i) => {
+      const dow = (d.getDay() + 6) % 7;
+      const cls = chiusura[i]
+        ? "bg-slate-50 text-slate-400"
+        : isSunday(d)
+        ? "text-red-600"
+        : isWeekend(d)
+        ? "text-slate-500"
+        : "text-slate-600";
+      return `<th class="px-1 py-2 text-center font-medium ${cls} min-w-[2.75rem]">
+        <div class="text-[10px]">${GIORNI_SETT[dow]}</div>
+        <div>${d.getDate()}</div>
+      </th>`;
+    })
+    .join("");
+
+  const rows = reparti
+    .flatMap((r) => {
+      const cellsPer = (slot) =>
+        days
+          .map((d, i) => {
+            if (chiusura[i]) return `<td class="px-1 py-1">${chiusaCellaHtml()}</td>`;
+            const cov = contaCopertura(r, toISO(d), dipendenti);
+            return `<td class="px-1 py-1">${contaCellaHtml(cov[slot], r.colore)}</td>`;
+          })
+          .join("");
+
+      return [
+        `<tr class="border-t-2 border-slate-200">
+          <td class="px-3 py-2 sticky left-0 bg-white z-10 border-r border-slate-100 whitespace-nowrap">
+            <span class="inline-flex items-center gap-1.5 font-medium text-slate-700">
+              <span class="w-2.5 h-2.5 rounded-sm inline-block" style="background:${r.colore}"></span>${r.nome}
+            </span>
+            <span class="block text-xs font-normal text-slate-400 pl-4">Mattina</span>
+          </td>
+          ${cellsPer("mattina")}
+        </tr>`,
+        `<tr>
+          <td class="px-3 py-2 pl-8 sticky left-0 bg-white z-10 border-r border-slate-100 whitespace-nowrap text-xs text-slate-400">
+            Pomeriggio
+          </td>
+          ${cellsPer("pomeriggio")}
+        </tr>`,
+      ];
+    })
+    .join("");
+
+  content.innerHTML = `
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border-collapse">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-3 py-2 sticky left-0 bg-slate-50 z-10 text-left text-slate-500">Reparto</th>
+            ${headerCells}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 // --- Vista Giorno (card per dipendente) ---
@@ -443,6 +546,7 @@ function renderCurrentView() {
   updatePeriodLabel();
   if (state.view === "mese") renderMese();
   else if (state.view === "settimana") renderSettimana();
+  else if (state.view === "analisi") renderAnalisiReparti();
   else renderGiorno();
 }
 
@@ -461,14 +565,14 @@ function setView(view) {
 viewTabs.forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
 
 prevBtn.addEventListener("click", () => {
-  if (state.view === "mese") state.refDate = addMonths(state.refDate, -1);
+  if (state.view === "mese" || state.view === "analisi") state.refDate = addMonths(state.refDate, -1);
   else if (state.view === "settimana") state.refDate = addDays(state.refDate, -7);
   else state.refDate = addDays(state.refDate, -1);
   renderCurrentView();
 });
 
 nextBtn.addEventListener("click", () => {
-  if (state.view === "mese") state.refDate = addMonths(state.refDate, 1);
+  if (state.view === "mese" || state.view === "analisi") state.refDate = addMonths(state.refDate, 1);
   else if (state.view === "settimana") state.refDate = addDays(state.refDate, 7);
   else state.refDate = addDays(state.refDate, 1);
   renderCurrentView();

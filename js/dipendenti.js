@@ -1,4 +1,4 @@
-import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./mock-data.js?v=11";
+import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./mock-data.js?v=12";
 
 const form = document.getElementById("dipendente-form");
 const idField = document.getElementById("dipendente-id");
