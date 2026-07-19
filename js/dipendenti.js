@@ -1,6 +1,6 @@
-import { requireSession } from "./auth.js?v=19";
-import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=19";
-import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=19";
+import { requireSession } from "./auth.js?v=20";
+import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=20";
+import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=20";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -41,7 +41,7 @@ async function render() {
         </span>
       </td>
       <td class="px-4 py-3 text-slate-500">${d.email || "—"}</td>
-      <td class="px-4 py-3 text-slate-500">${d.oreContrattualiMensili ?? "—"}</td>
+      <td class="px-4 py-3 text-slate-500">${d.oreContrattualiSettimanali ?? "—"}</td>
       <td class="px-4 py-3 text-slate-500">${d.note || "—"}</td>
       <td class="px-4 py-3 text-right whitespace-nowrap">
         ${
@@ -73,7 +73,7 @@ form.addEventListener("submit", async (e) => {
     cognome: cognomeField.value.trim(),
     ruolo: ruoloField.value,
     email: emailField.value.trim(),
-    oreContrattualiMensili: oreContrattualiField.value ? Number(oreContrattualiField.value) : null,
+    oreContrattualiSettimanali: oreContrattualiField.value ? Number(oreContrattualiField.value) : null,
     note: noteField.value.trim(),
   };
 
@@ -152,7 +152,7 @@ tbody.addEventListener("click", async (e) => {
     cognomeField.value = d.cognome;
     ruoloField.value = d.ruolo;
     emailField.value = d.email || "";
-    oreContrattualiField.value = d.oreContrattualiMensili ?? "";
+    oreContrattualiField.value = d.oreContrattualiSettimanali ?? "";
     noteField.value = d.note || "";
     formTitle.textContent = "Modifica dipendente";
     submitBtn.textContent = "Salva modifiche";

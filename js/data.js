@@ -23,7 +23,7 @@ import {
   writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=19";
+import { db } from "./app.js?v=20";
 
 export const MAX_REPARTI = 4;
 
@@ -173,6 +173,66 @@ export async function moveTurno(fromDipendenteId, fromDataISO, toDipendenteId, t
     tx.set(toRef, { dipendenteId: toDipendenteId, dataISO: toDataISO, ...turno });
     tx.delete(fromRef);
   });
+}
+
+// --- Manutenzione database ---
+// Firestore ha un piano gratuito con un limite di spazio: queste funzioni permettono
+// di eliminare definitivamente i turni ormai passati per restare sotto la soglia.
+
+function chunk(array, size) {
+  const gruppi = [];
+  for (let i = 0; i < array.length; i += size) gruppi.push(array.slice(i, i + size));
+  return gruppi;
+}
+
+// writeBatch ha un limite di 500 operazioni: qui si può eliminare uno storico
+// di mesi/anni di turni, quindi si spezza in più batch da 450 per sicurezza.
+async function eliminaRiferimenti(refs) {
+  let eliminati = 0;
+  for (const gruppo of chunk(refs, 450)) {
+    const batch = writeBatch(db);
+    gruppo.forEach((ref) => batch.delete(ref));
+    await batch.commit();
+    eliminati += gruppo.length;
+  }
+  return eliminati;
+}
+
+function rangeMeseCorrente() {
+  const oggi = new Date();
+  const anno = oggi.getFullYear();
+  const mese = oggi.getMonth();
+  const pad = (n) => String(n).padStart(2, "0");
+  const ultimoGiorno = new Date(anno, mese + 1, 0).getDate();
+  return {
+    start: `${anno}-${pad(mese + 1)}-01`,
+    end: `${anno}-${pad(mese + 1)}-${pad(ultimoGiorno)}`,
+  };
+}
+
+// Turni fino a una data (bloccati compresi): pensati per lo storico ormai passato.
+export async function contaTurniFinoA(dataLimiteISO) {
+  const snap = await getDocs(query(turniCol, where("dataISO", "<=", dataLimiteISO)));
+  return snap.size;
+}
+
+export async function eliminaTurniFinoA(dataLimiteISO) {
+  const snap = await getDocs(query(turniCol, where("dataISO", "<=", dataLimiteISO)));
+  return eliminaRiferimenti(snap.docs.map((d) => d.ref));
+}
+
+// Turni del mese corrente, esclusi quelli bloccati: per rifare la pianificazione da zero.
+export async function contaTurniMeseCorrente() {
+  const { start, end } = rangeMeseCorrente();
+  const snap = await getDocs(query(turniCol, where("dataISO", ">=", start), where("dataISO", "<=", end)));
+  return snap.docs.filter((d) => !d.data().bloccato).length;
+}
+
+export async function eliminaTurniMeseCorrente() {
+  const { start, end } = rangeMeseCorrente();
+  const snap = await getDocs(query(turniCol, where("dataISO", ">=", start), where("dataISO", "<=", end)));
+  const refs = snap.docs.filter((d) => !d.data().bloccato).map((d) => d.ref);
+  return eliminaRiferimenti(refs);
 }
 
 // --- Ferie e permessi ---
