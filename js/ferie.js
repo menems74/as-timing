@@ -1,5 +1,5 @@
-import { requireSession } from "./auth.js?v=17";
-import { getDipendenti, getFerie, addFerie, deleteFerie } from "./data.js?v=17";
+import { requireSession } from "./auth.js?v=18";
+import { getDipendenti, getFerie, addFerie, deleteFerie } from "./data.js?v=18";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -18,14 +18,14 @@ const TIPO_BADGE = {
   permesso: "bg-purple-100 text-purple-700",
 };
 
-let dipendenti = [];
-
-function dipendentiById() {
+function dipendentiById(dipendenti) {
   return Object.fromEntries(dipendenti.map((d) => [d.id, d]));
 }
 
-function renderDipendentiOptions() {
+function renderDipendentiOptions(dipendenti) {
+  const selezionato = dipendenteSelect.value;
   dipendenteSelect.innerHTML = dipendenti.map((d) => `<option value="${d.id}">${d.nome} ${d.cognome}</option>`).join("");
+  if (dipendenti.some((d) => d.id === selezionato)) dipendenteSelect.value = selezionato;
 }
 
 function formatDate(iso) {
@@ -33,8 +33,12 @@ function formatDate(iso) {
   return `${d}/${m}/${y}`;
 }
 
+// Ricarica sempre i dipendenti (non solo all'avvio): se un dipendente viene
+// aggiunto o eliminato altrove, questa pagina resta comunque coerente.
 async function render() {
-  const byId = dipendentiById();
+  const dipendenti = await getDipendenti();
+  renderDipendentiOptions(dipendenti);
+  const byId = dipendentiById(dipendenti);
   const ferie = await getFerie();
 
   tbody.innerHTML = ferie
@@ -69,27 +73,32 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  await addFerie({
-    dipendenteId: dipendenteSelect.value,
-    tipo: tipoField.value,
-    dataInizio: dataInizioField.value,
-    dataFine: dataFineField.value,
-    note: noteField.value.trim(),
-  });
-
-  form.reset();
-  await render();
+  try {
+    await addFerie({
+      dipendenteId: dipendenteSelect.value,
+      tipo: tipoField.value,
+      dataInizio: dataInizioField.value,
+      dataFine: dataFineField.value,
+      note: noteField.value.trim(),
+    });
+    form.reset();
+    await render();
+  } catch (err) {
+    alert("Errore durante il salvataggio della richiesta. Riprova.");
+  }
 });
 
 tbody.addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-id]");
   if (!btn) return;
   if (confirm("Eliminare questa richiesta?")) {
-    await deleteFerie(btn.dataset.id);
-    await render();
+    try {
+      await deleteFerie(btn.dataset.id);
+      await render();
+    } catch (err) {
+      alert("Errore durante l'eliminazione della richiesta. Riprova.");
+    }
   }
 });
 
-dipendenti = await getDipendenti();
-renderDipendentiOptions();
 await render();

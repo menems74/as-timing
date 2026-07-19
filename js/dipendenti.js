@@ -1,5 +1,5 @@
-import { requireSession } from "./auth.js?v=17";
-import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=17";
+import { requireSession } from "./auth.js?v=18";
+import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=18";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -70,14 +70,17 @@ form.addEventListener("submit", async (e) => {
     note: noteField.value.trim(),
   };
 
-  if (idField.value) {
-    await updateDipendente(idField.value, dati);
-  } else {
-    await addDipendente(dati);
+  try {
+    if (idField.value) {
+      await updateDipendente(idField.value, dati);
+    } else {
+      await addDipendente(dati);
+    }
+    resetForm();
+    await render();
+  } catch (err) {
+    alert("Errore durante il salvataggio del dipendente. Riprova.");
   }
-
-  resetForm();
-  await render();
 });
 
 cancelEditBtn.addEventListener("click", resetForm);
@@ -88,9 +91,13 @@ tbody.addEventListener("click", async (e) => {
   const id = btn.dataset.id;
 
   if (btn.dataset.action === "delete") {
-    if (confirm("Eliminare questo dipendente?")) {
-      await deleteDipendente(id);
-      await render();
+    if (confirm("Eliminare questo dipendente? Verranno rimossi anche i suoi turni e le sue ferie registrate.")) {
+      try {
+        await deleteDipendente(id);
+        await render();
+      } catch (err) {
+        alert("Errore durante l'eliminazione del dipendente. Riprova.");
+      }
     }
     return;
   }

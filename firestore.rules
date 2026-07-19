@@ -51,7 +51,7 @@ service cloud.firestore {
     }
 
     match /amministratori/{email} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && email == myEmail();
       allow write: if false; // gestito solo a mano da Firebase Console
     }
 

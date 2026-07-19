@@ -21,8 +21,9 @@ import {
   query,
   where,
   writeBatch,
+  runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=17";
+import { db } from "./app.js?v=18";
 
 export const MAX_REPARTI = 4;
 
@@ -77,12 +78,35 @@ export async function updateDipendente(id, patch) {
   return getDipendenti();
 }
 
+// Elimina il dipendente e tutto ciò che lo referenzia: turni, ferie, presenza
+// nei reparti, ruolo di direttore in Impostazioni (altrimenti restano dati orfani).
 export async function deleteDipendente(id) {
   const ref = doc(dipendentiCol, id);
   const snap = await getDoc(ref);
   const email = snap.exists() ? snap.data().email : "";
-  await deleteDoc(ref);
-  if (normalizeEmail(email)) await deleteDoc(doc(dipendentiLoginCol, normalizeEmail(email)));
+
+  const [turniSnap, ferieSnap, repartiAttuali, impostazioniAttuali] = await Promise.all([
+    getDocs(query(turniCol, where("dipendenteId", "==", id))),
+    getDocs(query(ferieCol, where("dipendenteId", "==", id))),
+    getReparti(),
+    getImpostazioni(),
+  ]);
+
+  const batch = writeBatch(db);
+  batch.delete(ref);
+  if (normalizeEmail(email)) batch.delete(doc(dipendentiLoginCol, normalizeEmail(email)));
+  turniSnap.docs.forEach((d) => batch.delete(d.ref));
+  ferieSnap.docs.forEach((d) => batch.delete(d.ref));
+  repartiAttuali.forEach((r) => {
+    if (r.dipendentiIds.includes(id)) {
+      batch.update(doc(repartiCol, r.id), { dipendentiIds: r.dipendentiIds.filter((x) => x !== id) });
+    }
+  });
+  if (impostazioniAttuali.direttoreId === id) {
+    batch.set(impostazioniRef, { ...impostazioniAttuali, direttoreId: "" });
+  }
+
+  await batch.commit();
   return getDipendenti();
 }
 
@@ -127,18 +151,28 @@ export async function removeTurno(dipendenteId, dataISO) {
   await deleteDoc(doc(turniCol, turnoKey(dipendenteId, dataISO)));
 }
 
+// Errori possibili: "TURNO_NON_SPOSTABILE" (il turno di partenza non esiste più
+// o è stato bloccato nel frattempo), "CELLA_OCCUPATA" (qualcun altro ha già
+// assegnato un turno nella cella di destinazione). Usa una transazione perché
+// la sola verifica lato client (cache) non basta se più persone modificano
+// il calendario nello stesso momento (Admin e Responsabile possono farlo insieme).
 export async function moveTurno(fromDipendenteId, fromDataISO, toDipendenteId, toDataISO) {
   const fromRef = doc(turniCol, turnoKey(fromDipendenteId, fromDataISO));
-  const fromSnap = await getDoc(fromRef);
-  if (!fromSnap.exists() || fromSnap.data().bloccato) return;
-
   const toRef = doc(turniCol, turnoKey(toDipendenteId, toDataISO));
-  const { dipendenteId, dataISO, ...turno } = fromSnap.data();
 
-  const batch = writeBatch(db);
-  batch.set(toRef, { dipendenteId: toDipendenteId, dataISO: toDataISO, ...turno });
-  batch.delete(fromRef);
-  await batch.commit();
+  await runTransaction(db, async (tx) => {
+    const fromSnap = await tx.get(fromRef);
+    if (!fromSnap.exists() || fromSnap.data().bloccato) {
+      throw new Error("TURNO_NON_SPOSTABILE");
+    }
+    const toSnap = await tx.get(toRef);
+    if (toSnap.exists()) {
+      throw new Error("CELLA_OCCUPATA");
+    }
+    const { dipendenteId, dataISO, ...turno } = fromSnap.data();
+    tx.set(toRef, { dipendenteId: toDipendenteId, dataISO: toDataISO, ...turno });
+    tx.delete(fromRef);
+  });
 }
 
 // --- Ferie e permessi ---

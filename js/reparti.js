@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=17";
+import { requireSession } from "./auth.js?v=18";
 import {
   getDipendenti,
   getReparti,
@@ -7,7 +7,7 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./data.js?v=17";
+} from "./data.js?v=18";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -67,37 +67,59 @@ async function render() {
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  await addReparto(nomeField.value.trim(), coloreField.value);
-  form.reset();
-  await render();
+  try {
+    await addReparto(nomeField.value.trim(), coloreField.value);
+    form.reset();
+    await render();
+  } catch (err) {
+    alert("Errore durante la creazione del reparto. Riprova.");
+  }
 });
 
 list.addEventListener("click", async (e) => {
   const delBtn = e.target.closest("button[data-delete]");
   if (delBtn && confirm("Eliminare questo reparto?")) {
-    await deleteReparto(delBtn.dataset.delete);
-    await render();
+    try {
+      await deleteReparto(delBtn.dataset.delete);
+      await render();
+    } catch (err) {
+      alert("Errore durante l'eliminazione del reparto. Riprova.");
+    }
     return;
   }
 
   const selectAllBtn = e.target.closest("button[data-select-all]");
   if (selectAllBtn) {
-    const tuttiIds = (await getDipendenti()).map((d) => d.id);
-    await updateReparto(selectAllBtn.dataset.selectAll, { dipendentiIds: tuttiIds });
-    await render();
+    try {
+      const tuttiIds = (await getDipendenti()).map((d) => d.id);
+      await updateReparto(selectAllBtn.dataset.selectAll, { dipendentiIds: tuttiIds });
+      await render();
+    } catch (err) {
+      alert("Errore durante l'aggiornamento del reparto. Riprova.");
+    }
   }
 });
 
 list.addEventListener("change", async (e) => {
   const checkbox = e.target.closest("input[type=checkbox][data-reparto]");
   if (checkbox) {
-    await toggleDipendenteReparto(checkbox.dataset.reparto, checkbox.dataset.dipendente);
+    try {
+      await toggleDipendenteReparto(checkbox.dataset.reparto, checkbox.dataset.dipendente);
+    } catch (err) {
+      checkbox.checked = !checkbox.checked; // annulla la spunta: la scrittura non è andata a buon fine
+      alert("Errore durante l'aggiornamento del reparto. Riprova.");
+    }
     return;
   }
 
   const colorInput = e.target.closest("input[type=color][data-color]");
   if (colorInput) {
-    await updateReparto(colorInput.dataset.color, { colore: colorInput.value });
+    try {
+      await updateReparto(colorInput.dataset.color, { colore: colorInput.value });
+    } catch (err) {
+      alert("Errore durante l'aggiornamento del colore. Riprova.");
+      await render();
+    }
   }
 });
 

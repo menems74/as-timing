@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=17";
+import { requireSession } from "./auth.js?v=18";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -16,14 +16,18 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./data.js?v=17";
+} from "./data.js?v=18";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
 
-if (!session.privileged) {
-  document.querySelectorAll("[data-privileged-only]").forEach((el) => el.remove());
-}
+// Gli elementi riservati partono nascosti in HTML (classe "hidden") per evitare
+// che un Dipendente in sola lettura li veda comparire per un istante prima che
+// la sessione venga risolta.
+document.querySelectorAll("[data-privileged-only]").forEach((el) => {
+  if (session.privileged) el.classList.remove("hidden");
+  else el.remove();
+});
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -501,16 +505,24 @@ function attachCellHandlers() {
 
       const targetDipendenteId = cell.dataset.dipendente;
       const targetDataISO = cell.dataset.data;
-      const targetOccupato = cache.turni[turnoKey(targetDipendenteId, targetDataISO)];
       const targetInFerie = isInFerie(targetDipendenteId, targetDataISO, cache.ferie);
 
       if (targetInFerie) {
         alert("Il dipendente è in ferie/permesso in questo giorno.");
-      } else if (targetOccupato) {
-        alert("La cella di destinazione ha già un turno assegnato.");
       } else {
-        await moveTurno(dragSource.dipendenteId, dragSource.dataISO, targetDipendenteId, targetDataISO);
-        await renderCurrentView();
+        try {
+          await moveTurno(dragSource.dipendenteId, dragSource.dataISO, targetDipendenteId, targetDataISO);
+          await renderCurrentView();
+        } catch (err) {
+          if (err.message === "CELLA_OCCUPATA") {
+            alert("La cella di destinazione ha già un turno assegnato.");
+          } else if (err.message === "TURNO_NON_SPOSTABILE") {
+            alert("Questo turno non è più spostabile (è stato bloccato o rimosso nel frattempo).");
+          } else {
+            alert("Errore durante lo spostamento del turno. Riprova.");
+          }
+          await renderCurrentView();
+        }
       }
       dragSource = null;
     });
@@ -587,22 +599,29 @@ modalForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!modalTarget) return;
 
-  await setTurno(modalTarget.dipendenteId, modalTarget.dataISO, {
-    tipo: modalTipo.value,
-    orario: modalOrario.value.trim(),
-    reparto: modalReparto.value.trim(),
-    bloccato: modalBloccato.checked,
-  });
-
-  closeModal();
-  await renderCurrentView();
+  try {
+    await setTurno(modalTarget.dipendenteId, modalTarget.dataISO, {
+      tipo: modalTipo.value,
+      orario: modalOrario.value.trim(),
+      reparto: modalReparto.value.trim(),
+      bloccato: modalBloccato.checked,
+    });
+    closeModal();
+    await renderCurrentView();
+  } catch (err) {
+    alert("Errore durante il salvataggio del turno. Riprova.");
+  }
 });
 
 modalDeleteBtn.addEventListener("click", async () => {
   if (!modalTarget) return;
-  await removeTurno(modalTarget.dipendenteId, modalTarget.dataISO);
-  closeModal();
-  await renderCurrentView();
+  try {
+    await removeTurno(modalTarget.dipendenteId, modalTarget.dataISO);
+    closeModal();
+    await renderCurrentView();
+  } catch (err) {
+    alert("Errore durante la rimozione del turno. Riprova.");
+  }
 });
 
 modalCancelBtn.addEventListener("click", closeModal);

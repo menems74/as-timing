@@ -1,6 +1,9 @@
-import { requireSession } from "./auth.js?v=17";
+import { requireSession } from "./auth.js?v=18";
 
 const session = await requireSession({ requirePrivileged: false });
-if (session && !session.privileged) {
-  document.querySelectorAll("[data-privileged-only]").forEach((el) => el.remove());
+if (session) {
+  document.querySelectorAll("[data-privileged-only]").forEach((el) => {
+    if (session.privileged) el.classList.remove("hidden");
+    else el.remove();
+  });
 }

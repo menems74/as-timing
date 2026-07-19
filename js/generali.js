@@ -1,5 +1,5 @@
-import { requireSession } from "./auth.js?v=17";
-import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=17";
+import { requireSession } from "./auth.js?v=18";
+import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=18";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -43,17 +43,32 @@ async function render() {
 }
 
 giornoSelect.addEventListener("change", async () => {
-  await updateImpostazioni({ giornoChiusura: giornoSelect.value });
+  try {
+    await updateImpostazioni({ giornoChiusura: giornoSelect.value });
+  } catch (err) {
+    alert("Errore durante il salvataggio. Riprova.");
+    await render();
+  }
 });
 
 direttoreSelect.addEventListener("change", async () => {
-  await updateImpostazioni({ direttoreId: direttoreSelect.value });
+  try {
+    await updateImpostazioni({ direttoreId: direttoreSelect.value });
+  } catch (err) {
+    alert("Errore durante il salvataggio. Riprova.");
+    await render();
+  }
 });
 
 Object.entries(orarioFields).forEach(([tipo, el]) => {
   el.addEventListener("change", async () => {
-    const imp = await getImpostazioni();
-    await updateImpostazioni({ orariDefault: { ...imp.orariDefault, [tipo]: el.value.trim() } });
+    try {
+      const imp = await getImpostazioni();
+      await updateImpostazioni({ orariDefault: { ...imp.orariDefault, [tipo]: el.value.trim() } });
+    } catch (err) {
+      alert("Errore durante il salvataggio. Riprova.");
+      await render();
+    }
   });
 });
 
