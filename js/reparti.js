@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=16";
+import { requireSession } from "./auth.js?v=17";
 import {
   getDipendenti,
   getReparti,
@@ -7,7 +7,7 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./data.js?v=16";
+} from "./data.js?v=17";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -15,7 +15,6 @@ if (!session) throw new Error("redirect");
 const form = document.getElementById("reparto-form");
 const nomeField = document.getElementById("nome-reparto");
 const coloreField = document.getElementById("colore-reparto");
-const maxMsg = document.getElementById("max-reparti-msg");
 const list = document.getElementById("reparti-list");
 
 async function render() {
@@ -24,7 +23,6 @@ async function render() {
 
   const atMax = reparti.length >= MAX_REPARTI;
   form.classList.toggle("hidden", atMax);
-  maxMsg.classList.toggle("hidden", !atMax);
 
   if (reparti.length === 0) {
     list.innerHTML = `<p class="text-sm text-slate-500 col-span-full">Nessun reparto creato.</p>`;
