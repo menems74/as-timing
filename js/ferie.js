@@ -1,4 +1,8 @@
-import { getDipendenti, getFerie, addFerie, deleteFerie } from "./mock-data.js?v=15";
+import { requireSession } from "./auth.js?v=16";
+import { getDipendenti, getFerie, addFerie, deleteFerie } from "./data.js?v=16";
+
+const session = await requireSession({ requirePrivileged: true });
+if (!session) throw new Error("redirect");
 
 const form = document.getElementById("ferie-form");
 const dipendenteSelect = document.getElementById("dipendente-id");
@@ -14,14 +18,14 @@ const TIPO_BADGE = {
   permesso: "bg-purple-100 text-purple-700",
 };
 
+let dipendenti = [];
+
 function dipendentiById() {
-  return Object.fromEntries(getDipendenti().map((d) => [d.id, d]));
+  return Object.fromEntries(dipendenti.map((d) => [d.id, d]));
 }
 
 function renderDipendentiOptions() {
-  dipendenteSelect.innerHTML = getDipendenti()
-    .map((d) => `<option value="${d.id}">${d.nome} ${d.cognome}</option>`)
-    .join("");
+  dipendenteSelect.innerHTML = dipendenti.map((d) => `<option value="${d.id}">${d.nome} ${d.cognome}</option>`).join("");
 }
 
 function formatDate(iso) {
@@ -29,9 +33,9 @@ function formatDate(iso) {
   return `${d}/${m}/${y}`;
 }
 
-function render() {
+async function render() {
   const byId = dipendentiById();
-  const ferie = getFerie();
+  const ferie = await getFerie();
 
   tbody.innerHTML = ferie
     .map((f) => {
@@ -57,7 +61,7 @@ function render() {
     .join("");
 }
 
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   if (dataFineField.value < dataInizioField.value) {
@@ -65,7 +69,7 @@ form.addEventListener("submit", (e) => {
     return;
   }
 
-  addFerie({
+  await addFerie({
     dipendenteId: dipendenteSelect.value,
     tipo: tipoField.value,
     dataInizio: dataInizioField.value,
@@ -74,17 +78,18 @@ form.addEventListener("submit", (e) => {
   });
 
   form.reset();
-  render();
+  await render();
 });
 
-tbody.addEventListener("click", (e) => {
+tbody.addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-id]");
   if (!btn) return;
   if (confirm("Eliminare questa richiesta?")) {
-    deleteFerie(btn.dataset.id);
-    render();
+    await deleteFerie(btn.dataset.id);
+    await render();
   }
 });
 
+dipendenti = await getDipendenti();
 renderDipendentiOptions();
-render();
+await render();

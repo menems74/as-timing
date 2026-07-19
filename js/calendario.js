@@ -1,17 +1,29 @@
+import { requireSession } from "./auth.js?v=16";
 import {
   getDipendenti,
   getDipendentiTurnabili,
-  getTurni,
+  getTurniRange,
+  getTurniPerDipendente,
+  turnoKey,
   setTurno,
   removeTurno,
   moveTurno,
   isInFerie,
+  getFerie,
+  getFeriePerDipendente,
   getReparti,
   repartiDiDipendente,
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./mock-data.js?v=15";
+} from "./data.js?v=16";
+
+const session = await requireSession({ requirePrivileged: false });
+if (!session) throw new Error("redirect");
+
+if (!session.privileged) {
+  document.querySelectorAll("[data-privileged-only]").forEach((el) => el.remove());
+}
 
 const MESI = [
   "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -34,6 +46,16 @@ const state = {
   view: "mese",
   refDate: new Date(),
   repartoFiltro: "",
+};
+
+// Cache popolata ad ogni renderCurrentView(): evita di rifare le stesse query
+// Firestore ad ogni singola cella durante il rendering di una griglia.
+const cache = {
+  dipendenti: [],
+  reparti: [],
+  impostazioni: null,
+  ferie: [],
+  turni: {},
 };
 
 // --- Helpers data ---
@@ -75,6 +97,34 @@ function isSunday(date) {
   return date.getDay() === 0;
 }
 
+// --- Caricamento dati (Firestore) ---
+
+async function loadCommon() {
+  cache.reparti = await getReparti();
+  cache.impostazioni = await getImpostazioni();
+
+  if (session.privileged) {
+    const tutti = await getDipendenti();
+    cache.dipendenti = getDipendentiTurnabili(tutti, cache.impostazioni);
+    cache.ferie = await getFerie();
+  } else {
+    // Il Dipendente in sola lettura vede solo la propria riga: le Security Rules
+    // non permetterebbero comunque di leggere l'anagrafica o le ferie altrui.
+    cache.dipendenti = [{ id: session.dipendenteId, nome: session.nome, cognome: session.cognome }];
+    cache.ferie = await getFeriePerDipendente(session.dipendenteId);
+  }
+}
+
+async function loadTurniPerGiorni(days) {
+  if (session.privileged) {
+    const start = toISO(days[0]);
+    const end = toISO(days[days.length - 1]);
+    cache.turni = await getTurniRange(start, end);
+  } else {
+    cache.turni = await getTurniPerDipendente(session.dipendenteId);
+  }
+}
+
 // --- Elementi DOM ---
 
 const content = document.getElementById("calendar-content");
@@ -93,7 +143,6 @@ const periodLabel = document.getElementById("period-label");
 const prevBtn = document.getElementById("prev-btn");
 const nextBtn = document.getElementById("next-btn");
 const todayBtn = document.getElementById("today-btn");
-const viewTabs = document.querySelectorAll(".view-tab");
 const elaboraBtn = document.getElementById("elabora-btn");
 const repartoFiltroSelect = document.getElementById("reparto-filtro");
 
@@ -132,9 +181,8 @@ function updatePeriodLabel() {
 // --- Cella turno (usata da vista mese e settimana) ---
 
 function buildCellaHtml(dipendenteId, dataISO) {
-  const turni = getTurni();
-  const turno = turni[`${dipendenteId}_${dataISO}`];
-  const inFerie = isInFerie(dipendenteId, dataISO);
+  const turno = cache.turni[turnoKey(dipendenteId, dataISO)];
+  const inFerie = isInFerie(dipendenteId, dataISO, cache.ferie);
   const filtro = state.repartoFiltro;
   const match = !filtro || (turno && turno.reparto === filtro);
   const dimClass = match ? "" : "opacity-25";
@@ -144,21 +192,24 @@ function buildCellaHtml(dipendenteId, dataISO) {
   }
 
   if (!turno) {
-    return `<div class="h-10 rounded border border-dashed border-slate-200 hover:border-slate-400 hover:bg-slate-50 cursor-pointer transition-opacity ${dimClass}" title="Doppio click per assegnare un turno"></div>`;
+    const cursorClass = session.privileged ? "cursor-pointer hover:border-slate-400 hover:bg-slate-50" : "";
+    const hint = session.privileged ? "Doppio click per assegnare un turno" : "";
+    return `<div class="h-10 rounded border border-dashed border-slate-200 ${cursorClass} transition-opacity ${dimClass}" title="${hint}"></div>`;
   }
 
   const lockClass = turno.bloccato ? "ring-2 ring-red-400" : "";
   const icon = turno.bloccato ? "🔒" : "";
   const sigla = turno.tipo === "giornata" ? "G" : turno.tipo === "pomeriggio" ? "P" : "M";
-  const reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
+  const reparto = turno.reparto ? repartoByNome(turno.reparto, cache.reparti) : null;
   const tipoClass = `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
   const repartoStyle = reparto ? `border-left:8px solid ${reparto.colore};` : "";
+  const cursorClass = session.privileged ? "cursor-pointer" : "";
 
   return `
-    <div class="h-10 rounded ${tipoClass} ${lockClass} ${dimClass} text-[11px] flex items-center justify-center font-medium cursor-pointer select-none transition-opacity"
+    <div class="h-10 rounded ${tipoClass} ${lockClass} ${dimClass} ${cursorClass} text-[11px] flex items-center justify-center font-medium select-none transition-opacity"
          style="${repartoStyle}"
          title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""}"
-         draggable="${!turno.bloccato}">
+         draggable="${!!(session.privileged && !turno.bloccato)}">
       ${icon}${sigla}
     </div>
   `;
@@ -167,8 +218,8 @@ function buildCellaHtml(dipendenteId, dataISO) {
 // --- Vista Mese / Settimana (griglia dipendenti x giorni) ---
 
 function renderGrid(days) {
-  const dipendenti = getDipendentiTurnabili();
-  const chiusura = days.map((d) => isGiornoChiusura(d));
+  const dipendenti = cache.dipendenti;
+  const chiusura = days.map((d) => isGiornoChiusura(d, cache.impostazioni));
 
   const headerCells = days
     .map((d, i) => {
@@ -232,28 +283,29 @@ function renderGrid(days) {
   attachCellHandlers();
 }
 
-function renderMese() {
+async function renderMese() {
   const year = state.refDate.getFullYear();
   const month = state.refDate.getMonth();
   const total = daysInMonth(state.refDate);
   const days = Array.from({ length: total }, (_, i) => new Date(year, month, i + 1));
+  await loadTurniPerGiorni(days);
   renderGrid(days);
 }
 
-function renderSettimana() {
+async function renderSettimana() {
   const start = startOfWeek(state.refDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  await loadTurniPerGiorni(days);
   renderGrid(days);
 }
 
 // --- Vista Analisi Reparti (conteggio dipendenti per reparto/turno) ---
 
 function contaCopertura(reparto, iso, dipendenti) {
-  const turni = getTurni();
   const mattina = [];
   const pomeriggio = [];
   for (const dip of dipendenti) {
-    const turno = turni[`${dip.id}_${iso}`];
+    const turno = cache.turni[turnoKey(dip.id, iso)];
     if (!turno || turno.reparto !== reparto.nome) continue;
     const nome = `${dip.nome} ${dip.cognome}`;
     if (turno.tipo === "mattina" || turno.tipo === "giornata") mattina.push(nome);
@@ -273,14 +325,16 @@ function chiusaCellaHtml() {
   return `<div class="h-10 rounded border border-dashed border-slate-200 bg-slate-50 text-slate-300 text-[11px] flex items-center justify-center font-medium">C</div>`;
 }
 
-function renderAnalisiReparti() {
+async function renderAnalisiReparti() {
   const year = state.refDate.getFullYear();
   const month = state.refDate.getMonth();
   const total = daysInMonth(state.refDate);
   const days = Array.from({ length: total }, (_, i) => new Date(year, month, i + 1));
-  const chiusura = days.map((d) => isGiornoChiusura(d));
-  const dipendenti = getDipendentiTurnabili();
-  const reparti = getReparti().filter((r) => !state.repartoFiltro || r.nome === state.repartoFiltro);
+  await loadTurniPerGiorni(days);
+
+  const chiusura = days.map((d) => isGiornoChiusura(d, cache.impostazioni));
+  const dipendenti = cache.dipendenti;
+  const reparti = cache.reparti.filter((r) => !state.repartoFiltro || r.nome === state.repartoFiltro);
 
   if (reparti.length === 0) {
     setContentHtml(`<div class="p-10 text-center text-slate-500">Nessun reparto configurato (Impostazioni → Reparti).</div>`);
@@ -354,12 +408,12 @@ function renderAnalisiReparti() {
 
 // --- Vista Giorno (card per dipendente) ---
 
-function renderGiorno() {
-  const dipendenti = getDipendentiTurnabili();
+async function renderGiorno() {
+  const dipendenti = cache.dipendenti;
   const iso = toISO(state.refDate);
-  const turni = getTurni();
+  await loadTurniPerGiorni([state.refDate]);
 
-  if (isGiornoChiusura(state.refDate)) {
+  if (isGiornoChiusura(state.refDate, cache.impostazioni)) {
     setContentHtml(`
       <div class="p-10 text-center text-slate-500">
         <div class="text-4xl mb-2">🔒</div>
@@ -372,8 +426,8 @@ function renderGiorno() {
 
   const cards = dipendenti
     .map((dip) => {
-      const inFerie = isInFerie(dip.id, iso);
-      const turno = turni[`${dip.id}_${iso}`];
+      const inFerie = isInFerie(dip.id, iso, cache.ferie);
+      const turno = cache.turni[turnoKey(dip.id, iso)];
 
       const filtro = state.repartoFiltro;
       const match = !filtro || (turno && turno.reparto === filtro);
@@ -384,7 +438,7 @@ function renderGiorno() {
       if (inFerie) {
         bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-200 text-orange-800 transition-opacity ${dimClass}">Ferie/Permesso</span>`;
       } else if (turno) {
-        reparto = turno.reparto ? repartoByNome(turno.reparto) : null;
+        reparto = turno.reparto ? repartoByNome(turno.reparto, cache.reparti) : null;
         const badgeClass = `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
         bodyHtml = `
           <span class="px-2 py-1 rounded-full text-xs font-medium ${badgeClass} transition-opacity ${dimClass}">
@@ -402,9 +456,11 @@ function renderGiorno() {
           </span>`
         : "";
 
+      const clickable = session.privileged && !inFerie;
+
       return `
-        <div class="flex items-center justify-between px-4 py-3 ${inFerie ? "" : "cursor-pointer hover:bg-slate-50"}"
-             ${inFerie ? "" : `data-cell data-dipendente="${dip.id}" data-data="${iso}"`}>
+        <div class="flex items-center justify-between px-4 py-3 ${clickable ? "cursor-pointer hover:bg-slate-50" : ""}"
+             ${clickable ? `data-cell data-dipendente="${dip.id}" data-data="${iso}"` : ""}>
           <span class="font-medium text-slate-700">${dip.nome} ${dip.cognome}${repartoNome}</span>
           <span>${bodyHtml}</span>
         </div>
@@ -420,6 +476,8 @@ function renderGiorno() {
 // --- Interazioni cella: click per aprire modale, drag & drop ---
 
 function attachCellHandlers() {
+  if (!session.privileged) return; // sola lettura: nessuna modifica possibile
+
   content.querySelectorAll("[data-cell]").forEach((cell) => {
     cell.addEventListener("dblclick", () => openModal(cell.dataset.dipendente, cell.dataset.data));
 
@@ -436,24 +494,23 @@ function attachCellHandlers() {
       cell.classList.add("bg-slate-100");
     });
     cell.addEventListener("dragleave", () => cell.classList.remove("bg-slate-100"));
-    cell.addEventListener("drop", (e) => {
+    cell.addEventListener("drop", async (e) => {
       e.preventDefault();
       cell.classList.remove("bg-slate-100");
       if (!dragSource) return;
 
       const targetDipendenteId = cell.dataset.dipendente;
       const targetDataISO = cell.dataset.data;
-      const turni = getTurni();
-      const targetOccupato = turni[`${targetDipendenteId}_${targetDataISO}`];
-      const targetInFerie = isInFerie(targetDipendenteId, targetDataISO);
+      const targetOccupato = cache.turni[turnoKey(targetDipendenteId, targetDataISO)];
+      const targetInFerie = isInFerie(targetDipendenteId, targetDataISO, cache.ferie);
 
       if (targetInFerie) {
         alert("Il dipendente è in ferie/permesso in questo giorno.");
       } else if (targetOccupato) {
         alert("La cella di destinazione ha già un turno assegnato.");
       } else {
-        moveTurno(dragSource.dipendenteId, dragSource.dataISO, targetDipendenteId, targetDataISO);
-        renderCurrentView();
+        await moveTurno(dragSource.dipendenteId, dragSource.dataISO, targetDipendenteId, targetDataISO);
+        await renderCurrentView();
       }
       dragSource = null;
     });
@@ -463,8 +520,8 @@ function attachCellHandlers() {
 // --- Modale turno ---
 
 function populateModalReparto(dipendenteId, repartoSelezionato) {
-  const tuttiReparti = getReparti().map((r) => r.nome);
-  const compatibili = repartiDiDipendente(dipendenteId).map((r) => r.nome);
+  const tuttiReparti = cache.reparti.map((r) => r.nome);
+  const compatibili = repartiDiDipendente(dipendenteId, cache.reparti).map((r) => r.nome);
 
   modalReparto.innerHTML =
     tuttiReparti.length === 0
@@ -483,11 +540,11 @@ function populateModalReparto(dipendenteId, repartoSelezionato) {
 }
 
 function openModal(dipendenteId, dataISO) {
-  if (isInFerie(dipendenteId, dataISO)) return;
+  if (isInFerie(dipendenteId, dataISO, cache.ferie)) return;
 
   modalTarget = { dipendenteId, dataISO };
-  const turno = getTurni()[`${dipendenteId}_${dataISO}`];
-  const dip = getDipendenti().find((d) => d.id === dipendenteId);
+  const turno = cache.turni[turnoKey(dipendenteId, dataISO)];
+  const dip = cache.dipendenti.find((d) => d.id === dipendenteId);
 
   modalTitle.textContent = `${dip ? dip.nome + " " + dip.cognome : ""} — ${dataISO.split("-").reverse().join("/")}`;
 
@@ -510,7 +567,7 @@ function openModal(dipendenteId, dataISO) {
 }
 
 function orarioDefaultPerTipo(tipo) {
-  return getImpostazioni().orariDefault[tipo] || "";
+  return (cache.impostazioni?.orariDefault || {})[tipo] || "";
 }
 
 modalTipo.addEventListener("change", () => {
@@ -526,11 +583,11 @@ function closeModal() {
   modalTarget = null;
 }
 
-modalForm.addEventListener("submit", (e) => {
+modalForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!modalTarget) return;
 
-  setTurno(modalTarget.dipendenteId, modalTarget.dataISO, {
+  await setTurno(modalTarget.dipendenteId, modalTarget.dataISO, {
     tipo: modalTipo.value,
     orario: modalOrario.value.trim(),
     reparto: modalReparto.value.trim(),
@@ -538,14 +595,14 @@ modalForm.addEventListener("submit", (e) => {
   });
 
   closeModal();
-  renderCurrentView();
+  await renderCurrentView();
 });
 
-modalDeleteBtn.addEventListener("click", () => {
+modalDeleteBtn.addEventListener("click", async () => {
   if (!modalTarget) return;
-  removeTurno(modalTarget.dipendenteId, modalTarget.dataISO);
+  await removeTurno(modalTarget.dipendenteId, modalTarget.dataISO);
   closeModal();
-  renderCurrentView();
+  await renderCurrentView();
 });
 
 modalCancelBtn.addEventListener("click", closeModal);
@@ -555,17 +612,18 @@ modal.addEventListener("click", (e) => {
 
 // --- Tabs, navigazione periodo, elabora ---
 
-function renderCurrentView() {
+async function renderCurrentView() {
   updatePeriodLabel();
-  if (state.view === "mese") renderMese();
-  else if (state.view === "settimana") renderSettimana();
-  else if (state.view === "analisi") renderAnalisiReparti();
-  else renderGiorno();
+  await loadCommon();
+  if (state.view === "mese") await renderMese();
+  else if (state.view === "settimana") await renderSettimana();
+  else if (state.view === "analisi") await renderAnalisiReparti();
+  else await renderGiorno();
 }
 
 function setView(view) {
   state.view = view;
-  viewTabs.forEach((tab) => {
+  document.querySelectorAll(".view-tab").forEach((tab) => {
     const active = tab.dataset.view === view;
     tab.classList.toggle("bg-white", active);
     tab.classList.toggle("shadow-sm", active);
@@ -575,7 +633,7 @@ function setView(view) {
   renderCurrentView();
 }
 
-viewTabs.forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
+document.querySelectorAll(".view-tab").forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
 
 prevBtn.addEventListener("click", () => {
   if (state.view === "mese" || state.view === "analisi") state.refDate = addMonths(state.refDate, -1);
@@ -596,17 +654,18 @@ todayBtn.addEventListener("click", () => {
   renderCurrentView();
 });
 
-elaboraBtn.addEventListener("click", () => {
-  alert(
-    "L'algoritmo di pianificazione automatica sarà implementato nella fase successiva.\n\nPer ora puoi inserire e spostare i turni manualmente."
-  );
-});
+if (elaboraBtn) {
+  elaboraBtn.addEventListener("click", () => {
+    alert(
+      "L'algoritmo di pianificazione automatica sarà implementato nella fase successiva.\n\nPer ora puoi inserire e spostare i turni manualmente."
+    );
+  });
+}
 
 // --- Filtro e legenda reparti ---
 
-function populateRepartiUI() {
-  const reparti = getReparti();
-
+async function populateRepartiUI() {
+  const reparti = await getReparti();
   repartoFiltroSelect.innerHTML =
     `<option value="">Tutti</option>` +
     reparti.map((r) => `<option value="${r.nome}">${r.nome}</option>`).join("");
@@ -619,5 +678,5 @@ repartoFiltroSelect.addEventListener("change", () => {
 
 // --- Avvio ---
 
-populateRepartiUI();
+await populateRepartiUI();
 setView("mese");

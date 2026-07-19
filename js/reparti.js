@@ -1,3 +1,4 @@
+import { requireSession } from "./auth.js?v=16";
 import {
   getDipendenti,
   getReparti,
@@ -6,7 +7,10 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./mock-data.js?v=15";
+} from "./data.js?v=16";
+
+const session = await requireSession({ requirePrivileged: true });
+if (!session) throw new Error("redirect");
 
 const form = document.getElementById("reparto-form");
 const nomeField = document.getElementById("nome-reparto");
@@ -14,9 +18,9 @@ const coloreField = document.getElementById("colore-reparto");
 const maxMsg = document.getElementById("max-reparti-msg");
 const list = document.getElementById("reparti-list");
 
-function render() {
-  const reparti = getReparti();
-  const dipendenti = getDipendenti();
+async function render() {
+  const reparti = await getReparti();
+  const dipendenti = await getDipendenti();
 
   const atMax = reparti.length >= MAX_REPARTI;
   form.classList.toggle("hidden", atMax);
@@ -63,40 +67,40 @@ function render() {
     .join("");
 }
 
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  addReparto(nomeField.value.trim(), coloreField.value);
+  await addReparto(nomeField.value.trim(), coloreField.value);
   form.reset();
-  render();
+  await render();
 });
 
-list.addEventListener("click", (e) => {
+list.addEventListener("click", async (e) => {
   const delBtn = e.target.closest("button[data-delete]");
   if (delBtn && confirm("Eliminare questo reparto?")) {
-    deleteReparto(delBtn.dataset.delete);
-    render();
+    await deleteReparto(delBtn.dataset.delete);
+    await render();
     return;
   }
 
   const selectAllBtn = e.target.closest("button[data-select-all]");
   if (selectAllBtn) {
-    const tuttiIds = getDipendenti().map((d) => d.id);
-    updateReparto(selectAllBtn.dataset.selectAll, { dipendentiIds: tuttiIds });
-    render();
+    const tuttiIds = (await getDipendenti()).map((d) => d.id);
+    await updateReparto(selectAllBtn.dataset.selectAll, { dipendentiIds: tuttiIds });
+    await render();
   }
 });
 
-list.addEventListener("change", (e) => {
+list.addEventListener("change", async (e) => {
   const checkbox = e.target.closest("input[type=checkbox][data-reparto]");
   if (checkbox) {
-    toggleDipendenteReparto(checkbox.dataset.reparto, checkbox.dataset.dipendente);
+    await toggleDipendenteReparto(checkbox.dataset.reparto, checkbox.dataset.dipendente);
     return;
   }
 
   const colorInput = e.target.closest("input[type=color][data-color]");
   if (colorInput) {
-    updateReparto(colorInput.dataset.color, { colore: colorInput.value });
+    await updateReparto(colorInput.dataset.color, { colore: colorInput.value });
   }
 });
 
-render();
+await render();

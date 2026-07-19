@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// AS Timing — Security Rules.
+//
+// Ruoli:
+// - Admin: email presente in `amministratori/{email}` (gestito solo a mano da Console).
+// - Responsabile: dipendente con campo ruolo == "responsabile" (via dipendenti_login).
+//   Admin e Responsabile sono equivalenti: entrambi "privilegiati" (lettura/scrittura ovunque).
+// - Dipendente semplice: sola lettura, limitata ai propri turni/ferie.
+//
+// `dipendenti_login/{email}` è una collezione ponte email -> dipendenteId: serve perché
+// le regole non possono fare query per campo, solo get() su path noti.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function isAdminEmail() {
+      return exists(/databases/$(database)/documents/amministratori/$(myEmail()));
+    }
+
+    function hasLogin() {
+      return exists(/databases/$(database)/documents/dipendenti_login/$(myEmail()));
+    }
+
+    function loginDoc() {
+      return get(/databases/$(database)/documents/dipendenti_login/$(myEmail()));
+    }
+
+    function myDipendenteId() {
+      return loginDoc().data.dipendenteId;
+    }
+
+    function isResponsabile() {
+      return hasLogin() &&
+        get(/databases/$(database)/documents/dipendenti/$(myDipendenteId())).data.ruolo == "responsabile";
+    }
+
+    function isPrivileged() {
+      return isSignedIn() && (isAdminEmail() || isResponsabile());
+    }
+
+    function isSelf(dipendenteId) {
+      return isSignedIn() && hasLogin() && myDipendenteId() == dipendenteId;
+    }
+
+    match /amministratori/{email} {
+      allow read: if isSignedIn();
+      allow write: if false; // gestito solo a mano da Firebase Console
+    }
+
+    match /dipendenti_login/{email} {
+      allow get: if isSignedIn() && email == myEmail();
+      allow write: if isPrivileged();
+    }
+
+    match /dipendenti/{id} {
+      allow read: if isPrivileged() || isSelf(id);
+      allow write: if isPrivileged();
+    }
+
+    match /turni/{turnoId} {
+      allow read: if isPrivileged() || (isSignedIn() && isSelf(resource.data.dipendenteId));
+      allow write: if isPrivileged();
+    }
+
+    match /ferie/{id} {
+      allow read: if isPrivileged() || (isSignedIn() && isSelf(resource.data.dipendenteId));
+      allow write: if isPrivileged();
+    }
+
+    match /reparti/{id} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    match /impostazioni/{id} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+  }
+}

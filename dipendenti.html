@@ -12,7 +12,7 @@
   <main class="max-w-6xl mx-auto p-6">
     <header class="mb-6">
       <h1 class="text-2xl font-bold text-slate-800">Dipendenti</h1>
-      <p class="mt-1 text-sm text-slate-500">Dati di esempio — non ancora collegati al database.</p>
+      <p class="mt-1 text-sm text-slate-500">Anagrafica del personale del negozio.</p>
     </header>
 
     <section class="bg-white rounded-xl shadow p-6 mb-6">
@@ -49,6 +49,12 @@
                  class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
         </div>
 
+        <div class="lg:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Ore contrattuali/mese</label>
+          <input id="ore-contrattuali" type="number" min="0" step="1" placeholder="es. 104"
+                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
+        </div>
+
         <div class="sm:col-span-2 lg:col-span-12">
           <label class="block text-sm font-medium text-slate-700 mb-1">Note</label>
           <input id="note" type="text"
@@ -76,6 +82,7 @@
             <th class="px-4 py-3">Cognome</th>
             <th class="px-4 py-3">Ruolo</th>
             <th class="px-4 py-3">Email</th>
+            <th class="px-4 py-3">Ore/mese</th>
             <th class="px-4 py-3">Note</th>
             <th class="px-4 py-3 text-right">Azioni</th>
           </tr>
@@ -85,7 +92,7 @@
     </section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=15"></script>
-  <script type="module" src="./js/dipendenti.js?v=15"></script>
+  <script type="module" src="./js/nav.js?v=16"></script>
+  <script type="module" src="./js/dipendenti.js?v=16"></script>
 </body>
 </html>

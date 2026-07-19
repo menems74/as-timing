@@ -1,4 +1,8 @@
-import { getImpostazioni, updateImpostazioni, getDipendenti } from "./mock-data.js?v=15";
+import { requireSession } from "./auth.js?v=16";
+import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=16";
+
+const session = await requireSession({ requirePrivileged: true });
+if (!session) throw new Error("redirect");
 
 const GIORNI = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
@@ -12,8 +16,8 @@ const orarioFields = {
   giornata: document.getElementById("orario-giornata"),
 };
 
-function render() {
-  const imp = getImpostazioni();
+async function render() {
+  const imp = await getImpostazioni();
 
   giornoSelect.innerHTML =
     `<option value="">Nessuna chiusura settimanale</option>` +
@@ -21,7 +25,7 @@ function render() {
       (g, i) => `<option value="${i}" ${String(i) === String(imp.giornoChiusura) ? "selected" : ""}>${g}</option>`
     ).join("");
 
-  const dipendenti = getDipendenti();
+  const dipendenti = await getDipendenti();
   direttoreSelect.innerHTML =
     `<option value="">Nessuno</option>` +
     dipendenti
@@ -38,19 +42,19 @@ function render() {
   });
 }
 
-giornoSelect.addEventListener("change", () => {
-  updateImpostazioni({ giornoChiusura: giornoSelect.value });
+giornoSelect.addEventListener("change", async () => {
+  await updateImpostazioni({ giornoChiusura: giornoSelect.value });
 });
 
-direttoreSelect.addEventListener("change", () => {
-  updateImpostazioni({ direttoreId: direttoreSelect.value });
+direttoreSelect.addEventListener("change", async () => {
+  await updateImpostazioni({ direttoreId: direttoreSelect.value });
 });
 
 Object.entries(orarioFields).forEach(([tipo, el]) => {
-  el.addEventListener("change", () => {
-    const imp = getImpostazioni();
-    updateImpostazioni({ orariDefault: { ...imp.orariDefault, [tipo]: el.value.trim() } });
+  el.addEventListener("change", async () => {
+    const imp = await getImpostazioni();
+    await updateImpostazioni({ orariDefault: { ...imp.orariDefault, [tipo]: el.value.trim() } });
   });
 });
 
-render();
+await render();
