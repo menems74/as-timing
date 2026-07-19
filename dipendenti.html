@@ -55,6 +55,21 @@
                  class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
         </div>
 
+        <div class="lg:col-span-3">
+          <label class="block text-sm font-medium text-slate-700 mb-1">
+            Password di accesso <span class="font-normal text-slate-400">(solo per il primo accesso)</span>
+          </label>
+          <input id="password-accesso" type="text" placeholder="Lascia vuoto se già attivo o non serve"
+                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
+        </div>
+
+        <div class="sm:col-span-2 lg:col-span-12">
+          <p class="text-xs text-slate-400">
+            Compila "Password di accesso" solo quando questo dipendente non ha ancora un login attivo: verrà creato subito.
+            Se ha già un accesso e vuole/deve cambiare password, usa "Invia reset password" nella tabella qui sotto.
+          </p>
+        </div>
+
         <div class="sm:col-span-2 lg:col-span-12">
           <label class="block text-sm font-medium text-slate-700 mb-1">Note</label>
           <input id="note" type="text"
@@ -92,7 +107,7 @@
     </section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=18"></script>
-  <script type="module" src="./js/dipendenti.js?v=18"></script>
+  <script type="module" src="./js/nav.js?v=19"></script>
+  <script type="module" src="./js/dipendenti.js?v=19"></script>
 </body>
 </html>

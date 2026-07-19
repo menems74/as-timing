@@ -1,5 +1,5 @@
-import { requireSession } from "./auth.js?v=18";
-import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=18";
+import { requireSession } from "./auth.js?v=19";
+import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=19";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");

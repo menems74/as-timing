@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=18";
+import { requireSession } from "./auth.js?v=19";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -16,7 +16,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./data.js?v=18";
+} from "./data.js?v=19";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");

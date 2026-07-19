@@ -1,5 +1,6 @@
-import { requireSession } from "./auth.js?v=18";
-import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=18";
+import { requireSession } from "./auth.js?v=19";
+import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=19";
+import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=19";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -10,6 +11,7 @@ const nomeField = document.getElementById("nome");
 const cognomeField = document.getElementById("cognome");
 const ruoloField = document.getElementById("ruolo");
 const emailField = document.getElementById("email");
+const passwordAccessoField = document.getElementById("password-accesso");
 const oreContrattualiField = document.getElementById("ore-contrattuali");
 const noteField = document.getElementById("note");
 const formTitle = document.getElementById("form-title");
@@ -42,6 +44,11 @@ async function render() {
       <td class="px-4 py-3 text-slate-500">${d.oreContrattualiMensili ?? "—"}</td>
       <td class="px-4 py-3 text-slate-500">${d.note || "—"}</td>
       <td class="px-4 py-3 text-right whitespace-nowrap">
+        ${
+          d.email
+            ? `<button data-action="reset-password" data-id="${d.id}" class="text-teal-600 hover:underline text-xs mr-3">Invia reset password</button>`
+            : ""
+        }
         <button data-action="edit" data-id="${d.id}" class="text-slate-600 hover:underline text-xs mr-3">Modifica</button>
         <button data-action="delete" data-id="${d.id}" class="text-red-600 hover:underline text-xs">Elimina</button>
       </td>
@@ -70,12 +77,29 @@ form.addEventListener("submit", async (e) => {
     note: noteField.value.trim(),
   };
 
+  const password = passwordAccessoField.value;
+
   try {
     if (idField.value) {
       await updateDipendente(idField.value, dati);
     } else {
       await addDipendente(dati);
     }
+
+    if (dati.email && password) {
+      try {
+        await creaAccessoDipendente(dati.email, password);
+      } catch (err) {
+        if (err.code === "auth/email-already-in-use") {
+          alert(
+            "Questo dipendente ha già un accesso attivo: la password non è stata cambiata. Per cambiarla usa \"Invia reset password\"."
+          );
+        } else {
+          alert("Il dipendente è stato salvato, ma la creazione dell'accesso è fallita. Riprova dal bottone \"Invia reset password\" oppure ricontrolla la password inserita.");
+        }
+      }
+    }
+
     resetForm();
     await render();
   } catch (err) {
@@ -89,6 +113,24 @@ tbody.addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-action]");
   if (!btn) return;
   const id = btn.dataset.id;
+
+  if (btn.dataset.action === "reset-password") {
+    const d = dipendenti.find((x) => x.id === id);
+    if (!d) return;
+    if (confirm(`Inviare a ${d.email} l'email per impostare una nuova password?`)) {
+      try {
+        await inviaResetPassword(d.email);
+        alert("Email inviata. Il dipendente potrà scegliere una nuova password dal link ricevuto.");
+      } catch (err) {
+        if (err.code === "auth/user-not-found") {
+          alert("Questo dipendente non ha ancora un accesso attivo: crealo prima compilando \"Password di accesso\" in anagrafica.");
+        } else {
+          alert("Errore durante l'invio dell'email. Riprova.");
+        }
+      }
+    }
+    return;
+  }
 
   if (btn.dataset.action === "delete") {
     if (confirm("Eliminare questo dipendente? Verranno rimossi anche i suoi turni e le sue ferie registrate.")) {
