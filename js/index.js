@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=21";
+import { requireSession } from "./auth.js?v=22";
 
 const session = await requireSession({ requirePrivileged: false });
 if (session) {

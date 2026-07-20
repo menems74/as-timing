@@ -1,15 +1,15 @@
-import { getSession, logout } from "./auth.js?v=21";
+import { getSession, logout } from "./auth.js?v=22";
 
 const LINKS = [
   { href: "index.html", label: "Home" },
   { href: "calendario.html", label: "Calendario" },
   { href: "ferie.html", label: "Ferie e Permessi", privileged: true },
-  { href: "manutenzione.html", label: "Manutenzione DB", privileged: true },
 ];
 
 const SETTINGS_LINKS = [
   { href: "dipendenti.html", label: "Dipendenti" },
   { href: "reparti.html", label: "Reparti" },
+  { href: "manutenzione.html", label: "Manutenzione DB" },
   { href: "generali.html", label: "Generali", separator: true },
 ];
 
