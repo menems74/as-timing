@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=26";
+import { requireSession } from "./auth.js?v=27";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -16,7 +16,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./data.js?v=26";
+} from "./data.js?v=27";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -648,7 +648,7 @@ function setView(view) {
     const active = tab.dataset.view === view;
     tab.classList.toggle("bg-white", active);
     tab.classList.toggle("shadow-sm", active);
-    tab.classList.toggle("text-teal-700", active);
+    tab.classList.toggle("text-blue-900", active);
     tab.classList.toggle("text-slate-500", !active);
   });
   renderCurrentView();

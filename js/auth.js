@@ -7,8 +7,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { auth } from "./app.js?v=26";
-import { findAmministratore, findLoginDipendente } from "./data.js?v=26";
+import { auth } from "./app.js?v=27";
+import { findAmministratore, findLoginDipendente } from "./data.js?v=27";
 
 let sessionPromise = null;
 

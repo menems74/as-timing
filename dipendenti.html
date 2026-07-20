@@ -6,7 +6,7 @@
   <title>AS Timing — Dipendenti</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-teal-50/40">
+<body class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/40">
   <div id="nav-placeholder" class="contents"></div>
 
   <main class="max-w-6xl mx-auto p-6">
@@ -23,19 +23,19 @@
         <div class="lg:col-span-3">
           <label class="block text-sm font-medium text-slate-700 mb-1">Nome</label>
           <input id="nome" type="text" required
-                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
+                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-blue-700 focus:bg-white focus:ring-2 focus:ring-blue-700/20 focus:outline-none transition-colors" />
         </div>
 
         <div class="lg:col-span-3">
           <label class="block text-sm font-medium text-slate-700 mb-1">Cognome</label>
           <input id="cognome" type="text" required
-                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
+                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-blue-700 focus:bg-white focus:ring-2 focus:ring-blue-700/20 focus:outline-none transition-colors" />
         </div>
 
         <div class="lg:col-span-2">
           <label class="block text-sm font-medium text-slate-700 mb-1">Ruolo</label>
           <select id="ruolo"
-                  class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors">
+                  class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-blue-700 focus:bg-white focus:ring-2 focus:ring-blue-700/20 focus:outline-none transition-colors">
             <option value="dipendente">Dipendente</option>
             <option value="responsabile">Responsabile</option>
           </select>
@@ -46,13 +46,13 @@
             Email <span class="font-normal text-slate-400">(facoltativa)</span>
           </label>
           <input id="email" type="email"
-                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
+                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-blue-700 focus:bg-white focus:ring-2 focus:ring-blue-700/20 focus:outline-none transition-colors" />
         </div>
 
         <div class="lg:col-span-2">
           <label class="block text-sm font-medium text-slate-700 mb-1">Ore contrattuali/settimana</label>
           <input id="ore-contrattuali" type="number" min="0" step="1" placeholder="es. 40" value="40"
-                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
+                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-blue-700 focus:bg-white focus:ring-2 focus:ring-blue-700/20 focus:outline-none transition-colors" />
         </div>
 
         <div class="lg:col-span-3">
@@ -60,7 +60,7 @@
             Password di accesso <span class="font-normal text-slate-400">(solo per il primo accesso)</span>
           </label>
           <input id="password-accesso" type="text" placeholder="Lascia vuoto se già attivo o non serve"
-                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
+                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-blue-700 focus:bg-white focus:ring-2 focus:ring-blue-700/20 focus:outline-none transition-colors" />
         </div>
 
         <div class="sm:col-span-2 lg:col-span-12">
@@ -73,12 +73,12 @@
         <div class="sm:col-span-2 lg:col-span-12">
           <label class="block text-sm font-medium text-slate-700 mb-1">Note</label>
           <input id="note" type="text"
-                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:outline-none transition-colors" />
+                 class="w-full rounded-lg border-2 border-slate-200 bg-slate-50 px-2.5 py-1 text-sm text-slate-800 focus:border-blue-700 focus:bg-white focus:ring-2 focus:ring-blue-700/20 focus:outline-none transition-colors" />
         </div>
 
         <div class="sm:col-span-2 lg:col-span-12 flex gap-2">
           <button type="submit" id="submit-btn"
-                  class="px-4 py-2 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-lg hover:from-teal-500 hover:to-cyan-500 shadow-sm">
+                  class="px-4 py-2 bg-gradient-to-r from-blue-800 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-500 shadow-sm">
             Aggiungi
           </button>
           <button type="button" id="cancel-edit-btn"
@@ -107,7 +107,7 @@
     </section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=26"></script>
-  <script type="module" src="./js/dipendenti.js?v=26"></script>
+  <script type="module" src="./js/nav.js?v=27"></script>
+  <script type="module" src="./js/dipendenti.js?v=27"></script>
 </body>
 </html>

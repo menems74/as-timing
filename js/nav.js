@@ -1,4 +1,4 @@
-import { getSession, logout } from "./auth.js?v=26";
+import { getSession, logout } from "./auth.js?v=27";
 
 const LINKS = [
   { href: "index.html", label: "Home" },
@@ -21,7 +21,7 @@ function currentPage() {
 function linkClass(active) {
   return `px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
     active
-      ? "bg-gradient-to-r from-teal-500/90 to-cyan-500/90 text-white shadow-sm shadow-teal-900/30"
+      ? "bg-gradient-to-r from-blue-700/90 to-cyan-500/90 text-white shadow-sm shadow-blue-950/30"
       : "text-slate-300 hover:bg-white/10 hover:text-white"
   }`;
 }
@@ -39,11 +39,11 @@ async function renderNav() {
   const settingsActive = settingsLinks.some((l) => l.href === active);
 
   placeholder.innerHTML = `
-    <nav class="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white sticky top-0 z-30 shadow-lg shadow-slate-900/20">
+    <nav class="bg-gradient-to-r from-blue-950 via-blue-900 to-blue-950 text-white sticky top-0 z-30 shadow-lg shadow-blue-950/30">
       <div class="max-w-6xl mx-auto px-4">
         <div class="flex flex-wrap items-center justify-between gap-y-1 py-2 min-h-14">
           <a href="index.html" class="flex items-center gap-2 shrink-0">
-            <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-cyan-500 text-slate-900 font-black text-sm shadow-inner">AS</span>
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 text-slate-900 font-black text-sm shadow-inner">AS</span>
             <span class="font-bold text-lg tracking-tight">Timing</span>
           </a>
           <div class="flex flex-wrap gap-1 items-center">
@@ -61,8 +61,8 @@ async function renderNav() {
                 ${settingsLinks.map(
                   (l) => `
                   ${l.separator ? '<div class="my-1 border-t border-slate-100"></div>' : ""}
-                  <a href="${l.href}" class="block px-4 py-2.5 text-sm hover:bg-teal-50 hover:text-teal-700 transition-colors ${
-                    l.href === active ? "bg-teal-50 text-teal-700 font-medium" : ""
+                  <a href="${l.href}" class="block px-4 py-2.5 text-sm hover:bg-blue-50 hover:text-blue-900 transition-colors ${
+                    l.href === active ? "bg-blue-50 text-blue-900 font-medium" : ""
                   }">${l.label}</a>
                 `
                 ).join("")}
@@ -78,7 +78,7 @@ async function renderNav() {
           </div>
         </div>
       </div>
-      <div class="h-[2px] bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-400 opacity-70"></div>
+      <div class="h-[2px] bg-gradient-to-r from-fuchsia-500 via-cyan-400 to-blue-500 opacity-80"></div>
     </nav>
   `;
 

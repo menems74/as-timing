@@ -1,6 +1,6 @@
-import { requireSession } from "./auth.js?v=26";
-import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=26";
-import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=26";
+import { requireSession } from "./auth.js?v=27";
+import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=27";
+import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=27";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -46,7 +46,7 @@ async function render() {
       <td class="px-4 py-3 text-right whitespace-nowrap">
         ${
           d.email
-            ? `<button data-action="reset-password" data-id="${d.id}" class="text-teal-600 hover:underline text-xs mr-3">Invia reset password</button>`
+            ? `<button data-action="reset-password" data-id="${d.id}" class="text-blue-800 hover:underline text-xs mr-3">Invia reset password</button>`
             : ""
         }
         <button data-action="edit" data-id="${d.id}" class="text-slate-600 hover:underline text-xs mr-3">Modifica</button>

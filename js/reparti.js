@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=26";
+import { requireSession } from "./auth.js?v=27";
 import {
   getDipendenti,
   getReparti,
@@ -7,7 +7,7 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./data.js?v=26";
+} from "./data.js?v=27";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -56,7 +56,7 @@ async function render() {
           </div>
           <div class="flex items-center justify-between mb-2">
             <p class="text-xs text-slate-500">Dipendenti abilitati</p>
-            ${dipendenti.length === 0 ? "" : `<button data-select-all="${r.id}" class="text-xs text-teal-600 hover:underline">Seleziona tutti</button>`}
+            ${dipendenti.length === 0 ? "" : `<button data-select-all="${r.id}" class="text-xs text-blue-800 hover:underline">Seleziona tutti</button>`}
           </div>
           ${dipendenti.length === 0 ? '<p class="text-sm text-slate-400">Nessun dipendente in anagrafica.</p>' : checkboxes}
         </div>
