@@ -94,7 +94,7 @@
             <li>Ogni dipendente lavora solo nei reparti per cui è abilitato.</li>
             <li>Il direttore di negozio non viene mai schedulato.</li>
             <li>Nessun turno nel giorno di chiusura settimanale.</li>
-            <li>Nessun turno nei giorni di ferie o permesso (che contano come giorni liberi).</li>
+            <li>Nei giorni di ferie o permesso il dipendente non è disponibile e non viene considerato nella pianificazione di quei giorni.</li>
           </ul>
         </div>
 
@@ -113,14 +113,14 @@
             <li>Reparti senza copertura per un turno.</li>
             <li>Reparti coperti da un solo dipendente per un turno.</li>
             <li>Dipendenti sopra il monte ore contrattuale.</li>
-            <li>Dipendenti sotto il monte ore contrattuale.</li>
+            <li>Dipendenti sotto il monte ore contrattuale (atteso nelle settimane con ferie o assenze: viene segnalato, non è un errore).</li>
           </ul>
         </div>
       </div>
     </section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=29"></script>
-  <script type="module" src="./js/generali.js?v=29"></script>
+  <script type="module" src="./js/nav.js?v=30"></script>
+  <script type="module" src="./js/generali.js?v=30"></script>
 </body>
 </html>
