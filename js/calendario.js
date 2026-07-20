@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=32";
+import { requireSession } from "./auth.js?v=33";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,8 +17,8 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=32";
-import { pianificaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=32";
+} from "./data.js?v=33";
+import { pianificaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=33";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -458,8 +458,9 @@ async function renderGiorno() {
       }
 
       const repartoNome = reparto
-        ? `<span class="ml-2 inline-flex items-center gap-1 text-xs text-slate-500">
-            <span class="w-2 h-2 rounded-full inline-block" style="background:${reparto.colore}"></span>${reparto.nome}
+        ? `<span class="ml-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-700 border transition-opacity ${dimClass}"
+                style="background:${reparto.colore}1f; border-color:${reparto.colore}90;">
+            <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${reparto.colore}"></span>${reparto.nome}
           </span>`
         : "";
 
@@ -468,7 +469,7 @@ async function renderGiorno() {
       return `
         <div class="flex items-center justify-between px-4 py-3 ${clickable ? "cursor-pointer hover:bg-slate-50" : ""}"
              ${clickable ? `data-cell data-dipendente="${dip.id}" data-data="${iso}"` : ""}>
-          <span class="font-medium text-slate-700">${dip.nome} ${dip.cognome}${repartoNome}</span>
+          <span class="font-medium text-slate-700 inline-flex items-center">${dip.nome} ${dip.cognome}${repartoNome}</span>
           <span>${bodyHtml}</span>
         </div>
       `;
