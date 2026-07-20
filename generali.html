@@ -35,25 +35,34 @@
     </section>
 
     <section class="bg-white rounded-xl shadow p-6 mb-6">
-      <h2 class="text-lg font-semibold text-slate-800 mb-1">Orari predefiniti per tipo turno</h2>
+      <h2 class="text-lg font-semibold text-slate-800 mb-1">Orari e durata per tipo turno</h2>
       <p class="text-sm text-slate-500 mb-4">
-        Quando scegli il tipo turno nel Calendario, il campo Orario si precompila con questi valori
-        (resta comunque modificabile per le eccezioni).
+        L'orario precompila il campo Orario nel Calendario (testo libero, modificabile per le eccezioni).
+        La durata in ore è quella che l'algoritmo userà per calcolare il monte ore contrattuale.
       </p>
       <div class="grid gap-4 sm:grid-cols-3">
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">Mattina</label>
           <input id="orario-mattina" type="text" placeholder="es. 9:00-13:00"
                  class="w-full rounded border-slate-300 focus:border-blue-700 focus:ring-blue-700" />
+          <label class="block text-xs text-slate-500 mt-2 mb-1">Durata (ore)</label>
+          <input id="ore-mattina" type="number" min="0" step="0.5" placeholder="es. 4"
+                 class="w-full rounded border-slate-300 focus:border-blue-700 focus:ring-blue-700" />
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">Pomeriggio</label>
           <input id="orario-pomeriggio" type="text" placeholder="es. 15:00-19:30"
                  class="w-full rounded border-slate-300 focus:border-blue-700 focus:ring-blue-700" />
+          <label class="block text-xs text-slate-500 mt-2 mb-1">Durata (ore)</label>
+          <input id="ore-pomeriggio" type="number" min="0" step="0.5" placeholder="es. 4,5"
+                 class="w-full rounded border-slate-300 focus:border-blue-700 focus:ring-blue-700" />
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">Giornata intera</label>
           <input id="orario-giornata" type="text" placeholder="es. 9:00-19:00"
+                 class="w-full rounded border-slate-300 focus:border-blue-700 focus:ring-blue-700" />
+          <label class="block text-xs text-slate-500 mt-2 mb-1">Durata (ore)</label>
+          <input id="ore-giornata" type="number" min="0" step="0.5" placeholder="es. 9"
                  class="w-full rounded border-slate-300 focus:border-blue-700 focus:ring-blue-700" />
         </div>
       </div>
@@ -72,18 +81,20 @@
             <li>Ragiona per settimane intere, da lunedì a domenica.</li>
             <li>Elabora tutte le settimane che toccano il mese: se il mese finisce a metà settimana, completa anche i primi giorni del mese successivo.</li>
             <li>Non tocca i giorni già pianificati in precedenza.</li>
+            <li>Copre ogni reparto fino alla sua copertura minima per turno (impostata in Reparti).</li>
+            <li>Le ore di ogni turno sono le durate definite qui sopra.</li>
           </ul>
         </div>
 
         <div>
           <p class="font-semibold text-slate-800 mb-1.5">Vincoli rigidi (mai violati)</p>
           <ul class="list-disc list-inside space-y-1">
-            <li>I turni inseriti a mano dal responsabile (normali e bloccati) restano intatti.</li>
-            <li>Ogni dipendente ha esattamente 1 giorno libero a settimana.</li>
+            <li>I turni bloccati (🔒) restano intatti; quelli non bloccati possono essere riorganizzati.</li>
+            <li>Ogni dipendente ha esattamente 1 giorno libero a settimana; il giorno di chiusura del negozio conta come giorno libero.</li>
             <li>Ogni dipendente lavora solo nei reparti per cui è abilitato.</li>
             <li>Il direttore di negozio non viene mai schedulato.</li>
             <li>Nessun turno nel giorno di chiusura settimanale.</li>
-            <li>Nessun turno nei giorni di ferie o permesso.</li>
+            <li>Nessun turno nei giorni di ferie o permesso (che contano come giorni liberi).</li>
           </ul>
         </div>
 
@@ -109,7 +120,7 @@
     </section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=28"></script>
-  <script type="module" src="./js/generali.js?v=28"></script>
+  <script type="module" src="./js/nav.js?v=29"></script>
+  <script type="module" src="./js/generali.js?v=29"></script>
 </body>
 </html>

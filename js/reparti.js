@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=28";
+import { requireSession } from "./auth.js?v=29";
 import {
   getDipendenti,
   getReparti,
@@ -7,7 +7,7 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./data.js?v=28";
+} from "./data.js?v=29";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -54,6 +54,11 @@ async function render() {
             </div>
             <button data-delete="${r.id}" class="text-red-600 hover:underline text-xs">Elimina</button>
           </div>
+          <label class="flex items-center justify-between gap-2 mb-3 text-xs text-slate-500">
+            Copertura minima per turno (persone)
+            <input type="number" min="1" step="1" data-copertura="${r.id}" value="${r.coperturaMinima ?? 1}"
+                   class="w-16 rounded border-slate-300 text-sm text-slate-800 focus:border-blue-700 focus:ring-blue-700" />
+          </label>
           <div class="flex items-center justify-between mb-2">
             <p class="text-xs text-slate-500">Dipendenti abilitati</p>
             ${dipendenti.length === 0 ? "" : `<button data-select-all="${r.id}" class="text-xs text-blue-800 hover:underline">Seleziona tutti</button>`}
@@ -108,6 +113,19 @@ list.addEventListener("change", async (e) => {
     } catch (err) {
       checkbox.checked = !checkbox.checked; // annulla la spunta: la scrittura non è andata a buon fine
       alert("Errore durante l'aggiornamento del reparto. Riprova.");
+    }
+    return;
+  }
+
+  const coperturaInput = e.target.closest("input[type=number][data-copertura]");
+  if (coperturaInput) {
+    const valore = Math.max(1, Math.round(Number(coperturaInput.value)) || 1);
+    coperturaInput.value = valore;
+    try {
+      await updateReparto(coperturaInput.dataset.copertura, { coperturaMinima: valore });
+    } catch (err) {
+      alert("Errore durante l'aggiornamento della copertura. Riprova.");
+      await render();
     }
     return;
   }

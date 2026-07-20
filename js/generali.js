@@ -1,5 +1,5 @@
-import { requireSession } from "./auth.js?v=28";
-import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=28";
+import { requireSession } from "./auth.js?v=29";
+import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=29";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -13,6 +13,12 @@ const orarioFields = {
   mattina: document.getElementById("orario-mattina"),
   pomeriggio: document.getElementById("orario-pomeriggio"),
   giornata: document.getElementById("orario-giornata"),
+};
+
+const oreFields = {
+  mattina: document.getElementById("ore-mattina"),
+  pomeriggio: document.getElementById("ore-pomeriggio"),
+  giornata: document.getElementById("ore-giornata"),
 };
 
 async function render() {
@@ -36,6 +42,10 @@ async function render() {
 
   Object.entries(orarioFields).forEach(([tipo, el]) => {
     el.value = imp.orariDefault[tipo] || "";
+  });
+
+  Object.entries(oreFields).forEach(([tipo, el]) => {
+    el.value = imp.oreTurno[tipo] ?? "";
   });
 }
 
@@ -62,6 +72,18 @@ Object.entries(orarioFields).forEach(([tipo, el]) => {
     try {
       const imp = await getImpostazioni();
       await updateImpostazioni({ orariDefault: { ...imp.orariDefault, [tipo]: el.value.trim() } });
+    } catch (err) {
+      alert("Errore durante il salvataggio. Riprova.");
+      await render();
+    }
+  });
+});
+
+Object.entries(oreFields).forEach(([tipo, el]) => {
+  el.addEventListener("change", async () => {
+    try {
+      const imp = await getImpostazioni();
+      await updateImpostazioni({ oreTurno: { ...imp.oreTurno, [tipo]: el.value ? Number(el.value) : 0 } });
     } catch (err) {
       alert("Errore durante il salvataggio. Riprova.");
       await render();

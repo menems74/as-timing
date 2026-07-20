@@ -23,7 +23,7 @@ import {
   writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=28";
+import { db } from "./app.js?v=29";
 
 export const MAX_REPARTI = 4;
 
@@ -296,7 +296,7 @@ export async function getReparti() {
 export async function addReparto(nome, colore) {
   const attuali = await getReparti();
   if (attuali.length >= MAX_REPARTI) return attuali;
-  await addDoc(repartiCol, { nome, colore: colore || "#0d9488", dipendentiIds: [] });
+  await addDoc(repartiCol, { nome, colore: colore || "#0d9488", dipendentiIds: [], coperturaMinima: 1 });
   return getReparti();
 }
 
@@ -332,24 +332,19 @@ export function repartoByNome(nome, repartiList) {
 
 // --- Impostazioni generali ---
 
-const DEFAULT_REGOLE_ALGORITMO = `Vincoli rigidi:
-- Rispettare tutti i turni pre-assegnati e bloccati manualmente dall'Admin.
-- Garantire a ciascun dipendente esattamente 1 giorno libero a settimana.
-- Rispettare le competenze di reparto (i dipendenti jolly, cioè abilitati su più reparti, possono coprire qualsiasi reparto).
-- Non assegnare mai turni nel giorno libero programmato del dipendente.
-- Nessun turno nel giorno di chiusura settimanale del negozio.
-
-Vincoli di equità mensile:
-- Garantire a ciascun dipendente almeno 2 domeniche libere al mese, distribuendo i turni domenicali in modo equo tra il personale disponibile.
-- Bilanciare le ore totali mensili lavorate in modo che ogni dipendente si avvicini il più possibile al proprio monte ore contrattuale, compensando settimane più cariche con settimane più scariche.`;
-
 const SEED_IMPOSTAZIONI = {
   giornoChiusura: "",
-  regoleAlgoritmo: DEFAULT_REGOLE_ALGORITMO,
   orariDefault: {
     mattina: "9:00-13:00",
     pomeriggio: "15:00-19:30",
     giornata: "9:00-19:00",
+  },
+  // Durata in ore per tipo turno: usata dall'algoritmo per il monte ore contrattuale
+  // (l'orario testuale è solo descrittivo e non viene interpretato).
+  oreTurno: {
+    mattina: 4,
+    pomeriggio: 4.5,
+    giornata: 9,
   },
   direttoreId: "",
 };
@@ -361,7 +356,12 @@ export async function getImpostazioni() {
     return { ...SEED_IMPOSTAZIONI };
   }
   const stored = snap.data();
-  return { ...SEED_IMPOSTAZIONI, ...stored, orariDefault: { ...SEED_IMPOSTAZIONI.orariDefault, ...stored.orariDefault } };
+  return {
+    ...SEED_IMPOSTAZIONI,
+    ...stored,
+    orariDefault: { ...SEED_IMPOSTAZIONI.orariDefault, ...stored.orariDefault },
+    oreTurno: { ...SEED_IMPOSTAZIONI.oreTurno, ...stored.oreTurno },
+  };
 }
 
 export async function updateImpostazioni(patch) {

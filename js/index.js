@@ -1,5 +1,5 @@
-import { requireSession } from "./auth.js?v=28";
-import { getStatoDatabase } from "./data.js?v=28";
+import { requireSession } from "./auth.js?v=29";
+import { getStatoDatabase } from "./data.js?v=29";
 
 const session = await requireSession({ requirePrivileged: false });
 if (session) {
