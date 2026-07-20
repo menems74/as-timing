@@ -1,4 +1,4 @@
-import { getSession, login } from "./auth.js?v=31";
+import { getSession, login } from "./auth.js?v=32";
 
 const form = document.getElementById("login-form");
 const emailField = document.getElementById("email");

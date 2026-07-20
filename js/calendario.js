@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=31";
+import { requireSession } from "./auth.js?v=32";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,8 +17,8 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=31";
-import { pianificaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=31";
+} from "./data.js?v=32";
+import { pianificaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=32";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -683,6 +683,7 @@ const reportModal = document.getElementById("report-modal");
 const reportSottotitolo = document.getElementById("report-sottotitolo");
 const reportContent = document.getElementById("report-content");
 const reportCloseBtn = document.getElementById("report-close-btn");
+const reportPrintBtn = document.getElementById("report-print-btn");
 
 function formatISO(iso) {
   return iso.split("-").reverse().join("/");
@@ -752,6 +753,7 @@ reportCloseBtn.addEventListener("click", () => {
   reportModal.classList.add("hidden");
   reportModal.classList.remove("flex");
 });
+reportPrintBtn.addEventListener("click", () => window.print());
 reportModal.addEventListener("click", (e) => {
   if (e.target === reportModal) reportCloseBtn.click();
 });
