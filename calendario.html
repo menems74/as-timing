@@ -61,6 +61,12 @@
       </h3>
       <form id="turno-form" class="space-y-4">
         <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Reparto</label>
+          <select id="modal-reparto"
+                  class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500"></select>
+          <p id="modal-reparto-hint" class="hidden text-xs text-amber-600 mt-1"></p>
+        </div>
+        <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">Tipo turno</label>
           <select id="modal-tipo" class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500">
             <option value="mattina">Mattina</option>
@@ -72,12 +78,6 @@
           <label class="block text-sm font-medium text-slate-700 mb-1">Orario</label>
           <input id="modal-orario" type="text" placeholder="es. 9:00-13:00"
                  class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Reparto</label>
-          <select id="modal-reparto"
-                  class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500"></select>
-          <p id="modal-reparto-hint" class="hidden text-xs text-amber-600 mt-1"></p>
         </div>
         <label class="flex items-center gap-2 text-sm text-slate-700">
           <input id="modal-bloccato" type="checkbox" class="rounded border-slate-300" />
@@ -98,7 +98,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/nav.js?v=25"></script>
-  <script type="module" src="./js/calendario.js?v=25"></script>
+  <script type="module" src="./js/nav.js?v=26"></script>
+  <script type="module" src="./js/calendario.js?v=26"></script>
 </body>
 </html>
