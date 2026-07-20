@@ -1,9 +1,10 @@
-import { getSession, logout } from "./auth.js?v=20";
+import { getSession, logout } from "./auth.js?v=21";
 
 const LINKS = [
   { href: "index.html", label: "Home" },
   { href: "calendario.html", label: "Calendario" },
   { href: "ferie.html", label: "Ferie e Permessi", privileged: true },
+  { href: "manutenzione.html", label: "Manutenzione DB", privileged: true },
 ];
 
 const SETTINGS_LINKS = [
