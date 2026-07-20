@@ -1,6 +1,6 @@
-import { requireSession } from "./auth.js?v=27";
-import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=27";
-import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=27";
+import { requireSession } from "./auth.js?v=28";
+import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=28";
+import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=28";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");

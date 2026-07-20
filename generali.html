@@ -62,14 +62,54 @@
     <section class="bg-white rounded-xl shadow p-6">
       <h2 class="text-lg font-semibold text-slate-800 mb-1">Regole dell'algoritmo di pianificazione</h2>
       <p class="text-sm text-slate-500 mb-4">
-        Testo informativo con le regole che l'algoritmo automatico dovrà rispettare quando verrà implementato.
-        Non è modificabile da qui.
+        Regole che l'algoritmo automatico rispetterà quando verrà attivato. Testo informativo, non modificabile.
       </p>
-      <pre id="regole" class="w-full rounded-lg bg-slate-50 border border-slate-200 p-4 font-mono text-sm text-slate-600 whitespace-pre-wrap"></pre>
+
+      <div class="rounded-lg bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700 space-y-4">
+        <div>
+          <p class="font-semibold text-slate-800 mb-1.5">Come pianifica</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Ragiona per settimane intere, da lunedì a domenica.</li>
+            <li>Elabora tutte le settimane che toccano il mese: se il mese finisce a metà settimana, completa anche i primi giorni del mese successivo.</li>
+            <li>Non tocca i giorni già pianificati in precedenza.</li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-800 mb-1.5">Vincoli rigidi (mai violati)</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>I turni inseriti a mano dal responsabile (normali e bloccati) restano intatti.</li>
+            <li>Ogni dipendente ha esattamente 1 giorno libero a settimana.</li>
+            <li>Ogni dipendente lavora solo nei reparti per cui è abilitato.</li>
+            <li>Il direttore di negozio non viene mai schedulato.</li>
+            <li>Nessun turno nel giorno di chiusura settimanale.</li>
+            <li>Nessun turno nei giorni di ferie o permesso.</li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-800 mb-1.5">Equità mensile</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Almeno 2 domeniche libere al mese per ciascun dipendente.</li>
+            <li>Turni domenicali distribuiti equamente tra il personale disponibile.</li>
+            <li>Ore settimanali bilanciate: ognuno raggiunge almeno le proprie ore contrattuali.</li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="font-semibold text-slate-800 mb-1.5">Dopo l'elaborazione: riepilogo anomalie</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Reparti senza copertura per un turno.</li>
+            <li>Reparti coperti da un solo dipendente per un turno.</li>
+            <li>Dipendenti sopra il monte ore contrattuale.</li>
+            <li>Dipendenti sotto il monte ore contrattuale.</li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 
-  <script type="module" src="./js/nav.js?v=27"></script>
-  <script type="module" src="./js/generali.js?v=27"></script>
+  <script type="module" src="./js/nav.js?v=28"></script>
+  <script type="module" src="./js/generali.js?v=28"></script>
 </body>
 </html>

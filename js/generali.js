@@ -1,5 +1,5 @@
-import { requireSession } from "./auth.js?v=27";
-import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=27";
+import { requireSession } from "./auth.js?v=28";
+import { getImpostazioni, updateImpostazioni, getDipendenti } from "./data.js?v=28";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -8,7 +8,6 @@ const GIORNI = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sa
 
 const giornoSelect = document.getElementById("giorno-chiusura");
 const direttoreSelect = document.getElementById("direttore");
-const regoleField = document.getElementById("regole");
 
 const orarioFields = {
   mattina: document.getElementById("orario-mattina"),
@@ -34,8 +33,6 @@ async function render() {
           `<option value="${d.id}" ${d.id === imp.direttoreId ? "selected" : ""}>${d.nome} ${d.cognome}</option>`
       )
       .join("");
-
-  regoleField.textContent = imp.regoleAlgoritmo || "";
 
   Object.entries(orarioFields).forEach(([tipo, el]) => {
     el.value = imp.orariDefault[tipo] || "";
