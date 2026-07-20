@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=24";
+import { requireSession } from "./auth.js?v=25";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -16,7 +16,7 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./data.js?v=24";
+} from "./data.js?v=25";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -151,7 +151,8 @@ const elaboraBtn = document.getElementById("elabora-btn");
 const repartoFiltroSelect = document.getElementById("reparto-filtro");
 
 const modal = document.getElementById("turno-modal");
-const modalTitle = document.getElementById("modal-title");
+const modalTitleNome = document.getElementById("modal-title-nome");
+const modalTitleData = document.getElementById("modal-title-data");
 const modalForm = document.getElementById("turno-form");
 const modalTipo = document.getElementById("modal-tipo");
 const modalOrario = document.getElementById("modal-orario");
@@ -558,7 +559,8 @@ function openModal(dipendenteId, dataISO) {
   const turno = cache.turni[turnoKey(dipendenteId, dataISO)];
   const dip = cache.dipendenti.find((d) => d.id === dipendenteId);
 
-  modalTitle.textContent = `${dip ? dip.nome + " " + dip.cognome : ""} — ${dataISO.split("-").reverse().join("/")}`;
+  modalTitleNome.textContent = dip ? `${dip.nome} ${dip.cognome}` : "";
+  modalTitleData.textContent = dataISO.split("-").reverse().join("/");
 
   if (turno) {
     modalTipo.value = turno.tipo;

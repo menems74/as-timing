@@ -23,7 +23,7 @@ import {
   writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=24";
+import { db } from "./app.js?v=25";
 
 export const MAX_REPARTI = 4;
 
@@ -385,8 +385,11 @@ export function isDirettore(dipendenteId, impostazioni) {
 }
 
 // Pura: dipendentiList e impostazioni vanno caricate a parte.
+// Ordine alfabetico per nome, per rendere il Calendario più facile da scorrere.
 export function getDipendentiTurnabili(dipendentiList, impostazioni) {
-  return dipendentiList.filter((d) => !isDirettore(d.id, impostazioni));
+  return dipendentiList
+    .filter((d) => !isDirettore(d.id, impostazioni))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
 }
 
 // --- Autenticazione: risoluzione ruolo (usate da auth.js) ---

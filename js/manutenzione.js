@@ -1,10 +1,10 @@
-import { requireSession } from "./auth.js?v=24";
+import { requireSession } from "./auth.js?v=25";
 import {
   contaTurniFinoA,
   eliminaTurniFinoA,
   contaTurniMeseCorrente,
   eliminaTurniMeseCorrente,
-} from "./data.js?v=24";
+} from "./data.js?v=25";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -17,6 +17,17 @@ function formatDataIt(iso) {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
+
+// Precompila con l'ultimo giorno del mese di due mesi fa: tiene per default
+// gli ultimi ~2 mesi e propone di ripulire tutto ciò che è più vecchio.
+function ultimoGiornoDueMesiFa() {
+  const oggi = new Date();
+  const fine = new Date(oggi.getFullYear(), oggi.getMonth() - 1, 0);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${fine.getFullYear()}-${pad(fine.getMonth() + 1)}-${pad(fine.getDate())}`;
+}
+
+manutenzioneDataField.value = ultimoGiornoDueMesiFa();
 
 eliminaFinoABtn.addEventListener("click", async () => {
   const dataLimite = manutenzioneDataField.value;
