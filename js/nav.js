@@ -1,4 +1,4 @@
-import { getSession, logout } from "./auth.js?v=22";
+import { getSession, logout } from "./auth.js?v=23";
 
 const LINKS = [
   { href: "index.html", label: "Home" },
@@ -9,8 +9,8 @@ const LINKS = [
 const SETTINGS_LINKS = [
   { href: "dipendenti.html", label: "Dipendenti" },
   { href: "reparti.html", label: "Reparti" },
-  { href: "manutenzione.html", label: "Manutenzione DB" },
-  { href: "generali.html", label: "Generali", separator: true },
+  { href: "manutenzione.html", label: "Manutenzione DB", separator: true },
+  { href: "generali.html", label: "Generali" },
 ];
 
 function currentPage() {
