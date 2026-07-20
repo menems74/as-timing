@@ -23,7 +23,7 @@ import {
   writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=23";
+import { db } from "./app.js?v=24";
 
 export const MAX_REPARTI = 4;
 
@@ -226,6 +226,26 @@ export async function contaTurniMeseCorrente() {
   const { start, end } = rangeMeseCorrente();
   const snap = await getDocs(query(turniCol, where("dataISO", ">=", start), where("dataISO", "<=", end)));
   return snap.docs.filter((d) => !d.data().bloccato).length;
+}
+
+// Panoramica per la Home: quanti turni ci sono in totale e quanti sono ormai
+// superati (prima del mese corrente, gli stessi che "Elimina fino a una data"
+// andrebbe a ripulire). Firestore non espone via client la dimensione reale
+// del database in MB: questo conteggio è il proxy più onesto disponibile.
+export async function getStatoDatabase() {
+  const { start } = rangeMeseCorrente();
+  const [totaleSnap, superatiCount] = await Promise.all([
+    getDocs(turniCol),
+    contaTurniFinoA(giornoPrimaDi(start)),
+  ]);
+  return { totale: totaleSnap.size, superati: superatiCount };
+}
+
+function giornoPrimaDi(dataISO) {
+  const d = new Date(dataISO + "T00:00:00");
+  d.setDate(d.getDate() - 1);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 export async function eliminaTurniMeseCorrente() {

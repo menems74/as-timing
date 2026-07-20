@@ -1,4 +1,4 @@
-import { getSession, logout } from "./auth.js?v=23";
+import { getSession, logout } from "./auth.js?v=24";
 
 const LINKS = [
   { href: "index.html", label: "Home" },

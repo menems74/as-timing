@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=23";
+import { requireSession } from "./auth.js?v=24";
 import {
   getDipendenti,
   getReparti,
@@ -7,7 +7,7 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./data.js?v=23";
+} from "./data.js?v=24";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
