@@ -269,10 +269,51 @@ export function pianificaMese({ refDate, dipendenti, reparti, ferie, impostazion
     }
   }
 
-  // --- Report anomalie ---
+  const report = generaReport({
+    settimane,
+    giorniISO,
+    reparti,
+    staff,
+    oreTurno,
+    giornoChiusura,
+    ferie,
+    turniBlocco: [...bloccati.values(), ...piano.values()],
+  });
+
+  return { daEliminare, daScrivere: [...piano.values()], report };
+}
+
+// Stesso identico report di pianificaMese, ma a partire dallo stato ATTUALE
+// dei turni (nessuna scrittura): serve per ricontrollare le anomalie dopo che
+// il responsabile ha corretto a mano i turni proposti dall'algoritmo.
+export function analizzaMese({ refDate, dipendenti, reparti, ferie, impostazioni, turniEsistenti }) {
+  const oreTurno = impostazioni.oreTurno || {};
+  const giornoChiusura = impostazioni.giornoChiusura ?? "";
+  const direttoreId = impostazioni.direttoreId || "";
+  const staff = dipendenti.filter((d) => d.id !== direttoreId);
+
+  const settimane = settimaneDelMese(refDate);
+  const giorniISO = settimane.flat().map(toISO);
+  const giorniSet = new Set(giorniISO);
+  const turniBlocco = Object.values(turniEsistenti).filter((t) => giorniSet.has(t.dataISO));
+
+  return generaReport({ settimane, giorniISO, reparti, staff, oreTurno, giornoChiusura, ferie, turniBlocco });
+}
+
+// Nucleo di calcolo del report, condiviso da pianificaMese (sullo stato che
+// l'algoritmo sta per scrivere) e analizzaMese (sullo stato letto da Firestore).
+function generaReport({ settimane, giorniISO, reparti, staff, oreTurno, giornoChiusura, ferie, turniBlocco }) {
+  const chiuso = (date) => giornoChiusura !== "" && (date.getDay() + 6) % 7 === Number(giornoChiusura);
+  const inFerie = (dipId, iso) =>
+    ferie.some((f) => f.dipendenteId === dipId && iso >= f.dataInizio && iso <= f.dataFine);
+  const oreDi = (t) => (t ? oreTurno[t.tipo] || 0 : 0);
+  const byKey = new Map(turniBlocco.map((t) => [`${t.dipendenteId}_${t.dataISO}`, t]));
+  const turnoDi = (dipId, iso) => byKey.get(`${dipId}_${iso}`) || null;
+  const domenicheISO = settimane.map((w) => toISO(w[6]));
+
   const copertura = (iso, slot, repNome) => {
     let n = 0;
-    for (const t of [...bloccati.values(), ...piano.values()]) {
+    for (const t of turniBlocco) {
       if (t.dataISO === iso && t.reparto === repNome && (t.tipo === slot || t.tipo === "giornata")) n++;
     }
     return n;
@@ -325,17 +366,13 @@ export function pianificaMese({ refDate, dipendenti, reparti, ferie, impostazion
   }
 
   return {
-    daEliminare,
-    daScrivere: [...piano.values()],
-    report: {
-      dallISO: giorniISO[0],
-      alISO: giorniISO[giorniISO.length - 1],
-      settimane: settimane.length,
-      copertureAssenti,
-      copertureSingole,
-      oreSopra,
-      oreSotto,
-      domenicheInsufficienti,
-    },
+    dallISO: giorniISO[0],
+    alISO: giorniISO[giorniISO.length - 1],
+    settimane: settimane.length,
+    copertureAssenti,
+    copertureSingole,
+    oreSopra,
+    oreSotto,
+    domenicheInsufficienti,
   };
 }

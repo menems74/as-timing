@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=33";
+import { requireSession } from "./auth.js?v=34";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,8 +17,8 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=33";
-import { pianificaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=33";
+} from "./data.js?v=34";
+import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=34";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -150,6 +150,7 @@ const prevBtn = document.getElementById("prev-btn");
 const nextBtn = document.getElementById("next-btn");
 const todayBtn = document.getElementById("today-btn");
 const elaboraBtn = document.getElementById("elabora-btn");
+const analisiBtn = document.getElementById("analisi-btn");
 const repartoFiltroSelect = document.getElementById("reparto-filtro");
 
 const modal = document.getElementById("turno-modal");
@@ -704,11 +705,8 @@ function sezioneReport(titolo, righe, colore) {
   `;
 }
 
-function mostraReport(esito) {
-  const r = esito.report;
-  reportSottotitolo.textContent =
-    `Periodo ${formatISO(r.dallISO)} – ${formatISO(r.alISO)} (${r.settimane} settimane): ` +
-    `${esito.daScrivere.length} turni creati, ${esito.daEliminare.length} rimossi.`;
+function mostraReport(r, sottotitolo) {
+  reportSottotitolo.textContent = sottotitolo;
 
   const sezioni = [
     sezioneReport(
@@ -801,7 +799,12 @@ if (elaboraBtn) {
 
       await applicaPianificazione(esito.daEliminare, esito.daScrivere);
       await renderCurrentView();
-      mostraReport(esito);
+      const r = esito.report;
+      mostraReport(
+        r,
+        `Periodo ${formatISO(r.dallISO)} – ${formatISO(r.alISO)} (${r.settimane} settimane): ` +
+          `${esito.daScrivere.length} turni creati, ${esito.daEliminare.length} rimossi.`
+      );
     } catch (err) {
       // Le scritture avvengono a blocchi: un errore a metà può lasciare uno stato
       // parziale, ma rilanciare l'elaborazione riorganizza comunque tutto.
@@ -809,6 +812,44 @@ if (elaboraBtn) {
     } finally {
       elaboraBtn.disabled = false;
       elaboraBtn.textContent = testoOriginale;
+    }
+  });
+}
+
+if (analisiBtn) {
+  analisiBtn.addEventListener("click", async () => {
+    analisiBtn.disabled = true;
+    const testoOriginale = analisiBtn.textContent;
+    analisiBtn.textContent = "Verifica…";
+    try {
+      const [dipendenti, reparti, ferieList, imp] = await Promise.all([
+        getDipendenti(),
+        getReparti(),
+        getFerie(),
+        getImpostazioni(),
+      ]);
+      const settimane = settimaneDelMese(state.refDate);
+      const giorni = settimane.flat();
+      const turniEsistenti = await getTurniRange(toISO(giorni[0]), toISO(giorni[giorni.length - 1]));
+
+      const r = analizzaMese({
+        refDate: state.refDate,
+        dipendenti,
+        reparti,
+        ferie: ferieList,
+        impostazioni: imp,
+        turniEsistenti,
+      });
+
+      mostraReport(
+        r,
+        `Periodo ${formatISO(r.dallISO)} – ${formatISO(r.alISO)} (${r.settimane} settimane): stato attuale del calendario, nessuna modifica.`
+      );
+    } catch (err) {
+      alert("Errore durante l'analisi. Riprova.");
+    } finally {
+      analisiBtn.disabled = false;
+      analisiBtn.textContent = testoOriginale;
     }
   });
 }
