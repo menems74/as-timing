@@ -13,7 +13,7 @@
     <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold text-slate-800">Calendario Turni</h1>
-        <p class="mt-1 text-sm text-slate-500">Algoritmo di pianificazione automatica non ancora attivo.</p>
+        <p class="mt-1 text-sm text-slate-500">"Elabora Mese" pianifica automaticamente le settimane del mese visualizzato.</p>
       </div>
       <button id="elabora-btn" data-privileged-only
               class="hidden px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 font-medium">
@@ -98,7 +98,20 @@
     </div>
   </div>
 
-  <script type="module" src="./js/nav.js?v=30"></script>
-  <script type="module" src="./js/calendario.js?v=30"></script>
+  <!-- Modal riepilogo elaborazione -->
+  <div id="report-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6 max-h-[85vh] flex flex-col">
+      <h3 class="text-xl font-bold text-slate-900">Riepilogo elaborazione</h3>
+      <p id="report-sottotitolo" class="text-sm text-slate-500 mt-0.5 mb-4"></p>
+      <div id="report-content" class="space-y-4 text-sm overflow-y-auto"></div>
+      <div class="flex justify-end pt-4">
+        <button type="button" id="report-close-btn"
+                class="px-4 py-2 bg-gradient-to-r from-blue-800 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-500 shadow-sm">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/nav.js?v=31"></script>
+  <script type="module" src="./js/calendario.js?v=31"></script>
 </body>
 </html>

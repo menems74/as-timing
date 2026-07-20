@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=30";
+import { requireSession } from "./auth.js?v=31";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -16,7 +16,9 @@ import {
   repartoByNome,
   isGiornoChiusura,
   getImpostazioni,
-} from "./data.js?v=30";
+  applicaPianificazione,
+} from "./data.js?v=31";
+import { pianificaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=31";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -675,11 +677,136 @@ todayBtn.addEventListener("click", () => {
   renderCurrentView();
 });
 
+// --- Elaborazione automatica del mese ---
+
+const reportModal = document.getElementById("report-modal");
+const reportSottotitolo = document.getElementById("report-sottotitolo");
+const reportContent = document.getElementById("report-content");
+const reportCloseBtn = document.getElementById("report-close-btn");
+
+function formatISO(iso) {
+  return iso.split("-").reverse().join("/");
+}
+
+function sezioneReport(titolo, righe, colore) {
+  if (righe.length === 0) return "";
+  const palette = {
+    rosso: "bg-red-50 border-red-200 text-red-800",
+    ambra: "bg-amber-50 border-amber-200 text-amber-800",
+  }[colore];
+  return `
+    <div class="rounded-lg border p-3 ${palette}">
+      <p class="font-semibold mb-1.5">${titolo} (${righe.length})</p>
+      <ul class="list-disc list-inside space-y-0.5">${righe.map((r) => `<li>${r}</li>`).join("")}</ul>
+    </div>
+  `;
+}
+
+function mostraReport(esito) {
+  const r = esito.report;
+  reportSottotitolo.textContent =
+    `Periodo ${formatISO(r.dallISO)} – ${formatISO(r.alISO)} (${r.settimane} settimane): ` +
+    `${esito.daScrivere.length} turni creati, ${esito.daEliminare.length} rimossi.`;
+
+  const sezioni = [
+    sezioneReport(
+      "Reparti senza copertura",
+      r.copertureAssenti.map((c) => `${formatISO(c.dataISO)} ${SLOT_LABEL[c.slot]} — ${c.reparto}`),
+      "rosso"
+    ),
+    sezioneReport(
+      "Reparti con un solo dipendente",
+      r.copertureSingole.map((c) => `${formatISO(c.dataISO)} ${SLOT_LABEL[c.slot]} — ${c.reparto}`),
+      "ambra"
+    ),
+    sezioneReport(
+      "Sopra il monte ore contrattuale",
+      r.oreSopra.map((v) => `${v.nome} — settimana del ${formatISO(v.settimana)}: ${v.ore}h su ${v.contratto}h`),
+      "ambra"
+    ),
+    sezioneReport(
+      "Sotto il monte ore contrattuale",
+      r.oreSotto.map(
+        (v) =>
+          `${v.nome} — settimana del ${formatISO(v.settimana)}: ${v.ore}h su ${v.contratto}h` +
+          (v.haFerie ? " (ferie/permessi in settimana: atteso)" : "")
+      ),
+      "ambra"
+    ),
+    sezioneReport(
+      "Meno di 2 domeniche libere",
+      r.domenicheInsufficienti.map((v) => `${v.nome} — ${v.libere} domeniche libere nel periodo`),
+      "ambra"
+    ),
+  ].filter(Boolean);
+
+  reportContent.innerHTML = sezioni.length
+    ? sezioni.join("")
+    : `<div class="rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 p-3 font-medium">Nessuna anomalia rilevata.</div>`;
+
+  reportModal.classList.remove("hidden");
+  reportModal.classList.add("flex");
+}
+
+reportCloseBtn.addEventListener("click", () => {
+  reportModal.classList.add("hidden");
+  reportModal.classList.remove("flex");
+});
+reportModal.addEventListener("click", (e) => {
+  if (e.target === reportModal) reportCloseBtn.click();
+});
+
 if (elaboraBtn) {
-  elaboraBtn.addEventListener("click", () => {
-    alert(
-      "L'algoritmo di pianificazione automatica sarà implementato nella fase successiva.\n\nPer ora puoi inserire e spostare i turni manualmente."
-    );
+  elaboraBtn.addEventListener("click", async () => {
+    const imp = await getImpostazioni();
+    const oreT = imp.oreTurno || {};
+    if (!(oreT.mattina > 0) || !(oreT.pomeriggio > 0) || !(oreT.giornata > 0)) {
+      alert("Prima di elaborare imposta le durate in ore dei tre tipi turno in Impostazioni → Generali.");
+      return;
+    }
+    const reparti = await getReparti();
+    if (reparti.length === 0) {
+      alert("Prima di elaborare crea almeno un reparto in Impostazioni → Reparti.");
+      return;
+    }
+
+    const label = `${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}`;
+    if (
+      !confirm(
+        `Pianificare automaticamente ${label}?\n\nI turni non bloccati delle settimane del mese verranno riorganizzati; quelli bloccati (🔒) restano intatti.`
+      )
+    )
+      return;
+
+    elaboraBtn.disabled = true;
+    const testoOriginale = elaboraBtn.textContent;
+    elaboraBtn.textContent = "Elaborazione…";
+    try {
+      const [dipendenti, ferieList] = await Promise.all([getDipendenti(), getFerie()]);
+      const settimane = settimaneDelMese(state.refDate);
+      const giorni = settimane.flat();
+      const turniEsistenti = await getTurniRange(toISO(giorni[0]), toISO(giorni[giorni.length - 1]));
+
+      const esito = pianificaMese({
+        refDate: state.refDate,
+        dipendenti,
+        reparti,
+        ferie: ferieList,
+        impostazioni: imp,
+        turniEsistenti,
+      });
+
+      await applicaPianificazione(esito.daEliminare, esito.daScrivere);
+      await renderCurrentView();
+      mostraReport(esito);
+    } catch (err) {
+      // Le scritture avvengono a blocchi: un errore a metà può lasciare uno stato
+      // parziale, ma rilanciare l'elaborazione riorganizza comunque tutto.
+      alert("Errore durante l'elaborazione. Riprova: una nuova elaborazione sistema anche eventuali turni parziali.");
+    } finally {
+      elaboraBtn.disabled = false;
+      elaboraBtn.textContent = testoOriginale;
+    }
   });
 }
 

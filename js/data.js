@@ -23,7 +23,7 @@ import {
   writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=30";
+import { db } from "./app.js?v=31";
 
 export const MAX_REPARTI = 4;
 
@@ -173,6 +173,21 @@ export async function moveTurno(fromDipendenteId, fromDataISO, toDipendenteId, t
     tx.set(toRef, { dipendenteId: toDipendenteId, dataISO: toDataISO, ...turno });
     tx.delete(fromRef);
   });
+}
+
+// Applica il risultato di pianificaMese (js/algoritmo.js): elimina i turni non
+// bloccati rimpiazzati e scrive i nuovi, a blocchi da 450 per il limite di 500
+// operazioni per writeBatch (un mese pieno può superarlo facilmente).
+export async function applicaPianificazione(daEliminareKeys, nuoviTurni) {
+  const ops = [
+    ...daEliminareKeys.map((k) => ({ set: null, ref: doc(turniCol, k) })),
+    ...nuoviTurni.map((t) => ({ set: t, ref: doc(turniCol, turnoKey(t.dipendenteId, t.dataISO)) })),
+  ];
+  for (const gruppo of chunk(ops, 450)) {
+    const batch = writeBatch(db);
+    gruppo.forEach((op) => (op.set ? batch.set(op.ref, op.set) : batch.delete(op.ref)));
+    await batch.commit();
+  }
 }
 
 // --- Manutenzione database ---
