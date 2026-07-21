@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=37";
+import { requireSession } from "./auth.js?v=38";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,8 +17,8 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=37";
-import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=37";
+} from "./data.js?v=38";
+import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=38";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -196,7 +196,7 @@ function buildCellaHtml(dipendenteId, dataISO) {
   const dimClass = match ? "" : "opacity-25";
 
   if (inFerie) {
-    return `<div class="h-10 rounded bg-orange-200 text-orange-800 text-[11px] flex items-center justify-center font-medium transition-opacity ${dimClass}" title="Ferie/Permesso">F</div>`;
+    return `<div class="h-10 rounded bg-orange-100 border border-orange-300 text-orange-800 text-[11px] flex items-center justify-center font-bold transition-opacity ${dimClass}" title="Ferie/Permesso">F</div>`;
   }
 
   if (!turno) {
@@ -206,19 +206,42 @@ function buildCellaHtml(dipendenteId, dataISO) {
   }
 
   const lockClass = turno.bloccato ? "ring-2 ring-red-400" : "";
-  const icon = turno.bloccato ? "🔒" : "";
-  const sigla = turno.tipo === "giornata" ? "G" : turno.tipo === "pomeriggio" ? "P" : "M";
-  const reparto = turno.reparto ? repartoByNome(turno.reparto, cache.reparti) : null;
-  const tipoClass = `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
-  const repartoStyle = reparto ? `border-left:8px solid ${reparto.colore};` : "";
   const cursorClass = session.privileged ? "cursor-pointer" : "";
+  const reparto = turno.reparto ? repartoByNome(turno.reparto, cache.reparti) : null;
+
+  // Stile cella basato sul reparto (sfondo soft, bordo medio)
+  let cellStyle = "";
+  let borderClass = "";
+  const repColore = reparto ? reparto.colore : "#3b82f6"; // default blue
+
+  if (reparto) {
+    cellStyle = `background-color: ${reparto.colore}20; border-color: ${reparto.colore}70;`;
+    borderClass = "border-[1.5px]";
+  } else {
+    cellStyle = "background-color: #f8fafc; border-color: #cbd5e1;";
+    borderClass = "border-[1.5px]";
+  }
+
+  const fillStyle = `background-color: ${repColore};`;
+  const emptyStyle = `background-color: transparent;`;
+
+  const leftSegmentStyle = (turno.tipo === "mattina" || turno.tipo === "giornata") ? fillStyle : emptyStyle;
+  const rightSegmentStyle = (turno.tipo === "pomeriggio" || turno.tipo === "giornata") ? fillStyle : emptyStyle;
+
+  const lockHtml = turno.bloccato ? `<span class="text-[9px] leading-none mb-0.5" title="Bloccato">🔒</span>` : "";
 
   return `
-    <div class="h-10 rounded ${tipoClass} ${lockClass} ${dimClass} ${cursorClass} text-[11px] flex items-center justify-center font-medium select-none transition-opacity"
-         style="${repartoStyle}"
+    <div class="h-10 rounded ${borderClass} ${lockClass} ${dimClass} ${cursorClass} flex items-center justify-center select-none transition-opacity"
+         style="${cellStyle}"
          title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""}"
          draggable="${!!(session.privileged && !turno.bloccato)}">
-      ${icon}${sigla}
+      <div class="flex flex-col items-center justify-center w-full h-full gap-0.5">
+        ${lockHtml}
+        <div class="w-8 h-2 rounded bg-black/10 p-[1px] flex gap-[1px]">
+          <div class="h-full w-1/2 rounded-l-sm" style="${leftSegmentStyle}"></div>
+          <div class="h-full w-1/2 rounded-r-sm" style="${rightSegmentStyle}"></div>
+        </div>
+      </div>
     </div>
   `;
 }
