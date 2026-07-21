@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=44";
+import { requireSession } from "./auth.js?v=45";
 import {
   getDipendenti,
   getReparti,
@@ -7,7 +7,7 @@ import {
   deleteReparto,
   toggleDipendenteReparto,
   MAX_REPARTI,
-} from "./data.js?v=44";
+} from "./data.js?v=45";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -20,6 +20,7 @@ const list = document.getElementById("reparti-list");
 async function render() {
   const reparti = await getReparti();
   const dipendenti = await getDipendenti();
+  dipendenti.sort((a, b) => a.nome.localeCompare(b.nome, "it"));
 
   const atMax = reparti.length >= MAX_REPARTI;
   form.classList.toggle("hidden", atMax);

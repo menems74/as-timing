@@ -24,8 +24,8 @@ import {
   writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=44";
-import { CAMPI_SLOT } from "./algoritmo.js?v=44";
+import { db } from "./app.js?v=45";
+import { CAMPI_SLOT } from "./algoritmo.js?v=45";
 
 export const MAX_REPARTI = 4;
 

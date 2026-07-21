@@ -1,6 +1,6 @@
-import { requireSession } from "./auth.js?v=44";
-import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=44";
-import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=44";
+import { requireSession } from "./auth.js?v=45";
+import { getDipendenti, addDipendente, updateDipendente, deleteDipendente } from "./data.js?v=45";
+import { creaAccessoDipendente, inviaResetPassword } from "./admin-auth.js?v=45";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
@@ -29,6 +29,7 @@ let dipendenti = [];
 
 async function render() {
   dipendenti = await getDipendenti();
+  dipendenti.sort((a, b) => a.nome.localeCompare(b.nome, "it"));
   tbody.innerHTML = dipendenti
     .map(
       (d) => `
