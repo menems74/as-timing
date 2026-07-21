@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=35";
+import { requireSession } from "./auth.js?v=36";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,8 +17,8 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=35";
-import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=35";
+} from "./data.js?v=36";
+import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=36";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -171,7 +171,6 @@ let dragSource = null; // { dipendenteId, dataISO }
 // --- Rendering label periodo ---
 
 function updatePeriodLabel() {
-  const todayISO = toISO(new Date());
   if (state.view === "mese" || state.view === "analisi") {
     periodLabel.textContent = `${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}`;
   } else if (state.view === "settimana") {
@@ -183,8 +182,7 @@ function updatePeriodLabel() {
       : `${start.getDate()} ${MESI[start.getMonth()]} – ${end.getDate()} ${MESI[end.getMonth()]} ${end.getFullYear()}`;
   } else {
     const dow = (state.refDate.getDay() + 6) % 7;
-    const isToday = toISO(state.refDate) === todayISO;
-    periodLabel.textContent = `${GIORNI_SETT_LUNGHI[dow]} ${state.refDate.getDate()} ${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}${isToday ? " (Oggi)" : ""}`;
+    periodLabel.textContent = `${GIORNI_SETT_LUNGHI[dow]} ${state.refDate.getDate()} ${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}`;
   }
 }
 
@@ -463,45 +461,79 @@ async function renderGiorno() {
 
       const filtro = state.repartoFiltro;
       const match = !filtro || (turno && turno.reparto === filtro);
-      const dimClass = match ? "" : "opacity-25";
+      const dimClass = match ? "" : "opacity-30";
 
-      let bodyHtml;
+      let statusHtml = "";
       let reparto = null;
+      let leftBorderColor = "#cbd5e1"; // slate-300 default
+
       if (inFerie) {
-        bodyHtml = `<span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-200 text-orange-800 transition-opacity ${dimClass}">Ferie/Permesso</span>`;
+        leftBorderColor = "#fb923c"; // orange-400
+        statusHtml = `
+          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-50 text-orange-800 border border-orange-200 transition-opacity ${dimClass}">
+            <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+            Ferie / Permesso
+          </div>
+        `;
       } else if (turno) {
         reparto = turno.reparto ? repartoByNome(turno.reparto, cache.reparti) : null;
-        const badgeClass = `bg-white border-2 ${TIPO_BORDER[turno.tipo]}`;
-        bodyHtml = `
-          <span class="px-2 py-1 rounded-full text-xs font-medium ${badgeClass} transition-opacity ${dimClass}">
-            ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}
-          </span>
-          ${turno.orario ? `<span class="ml-2 text-sm text-slate-500">${turno.orario}</span>` : ""}
+        if (reparto) {
+          leftBorderColor = reparto.colore;
+        } else {
+          leftBorderColor = "#3b82f6"; // blue-500 default
+        }
+        
+        const badgeClass = `bg-white border ${TIPO_BORDER[turno.tipo]}`;
+        statusHtml = `
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass} transition-opacity ${dimClass}">
+              ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}
+            </span>
+            ${turno.orario ? `<span class="text-sm font-semibold text-slate-700 transition-opacity ${dimClass}">${turno.orario}</span>` : ""}
+          </div>
         `;
       } else {
-        bodyHtml = `<span class="text-sm text-slate-400 transition-opacity ${dimClass}">Nessun turno</span>`;
+        statusHtml = `
+          <span class="text-xs font-medium text-slate-400 transition-opacity ${dimClass} italic bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
+            Nessun turno
+          </span>
+        `;
       }
 
-      const repartoNome = reparto
-        ? `<span class="ml-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-700 border transition-opacity ${dimClass}"
-                style="background:${reparto.colore}1f; border-color:${reparto.colore}90;">
-            <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${reparto.colore}"></span>${reparto.nome}
+      const repartoBadge = reparto
+        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-700 border transition-opacity ${dimClass}"
+                style="background:${reparto.colore}18; border-color:${reparto.colore}60;">
+            <span class="w-2 h-2 rounded-full inline-block" style="background:${reparto.colore}"></span>${reparto.nome}
           </span>`
         : "";
 
+      const ruoloLabel = dip.ruolo ? (dip.ruolo.charAt(0).toUpperCase() + dip.ruolo.slice(1)) : "Dipendente";
       const clickable = session.privileged && !inFerie;
+      const cardHoverClass = clickable 
+        ? "cursor-pointer hover:shadow-md hover:border-slate-300 hover:bg-slate-50/50 hover:-translate-y-0.5 active:translate-y-0" 
+        : "bg-white";
 
       return `
-        <div class="flex items-center justify-between px-4 py-3 ${clickable ? "cursor-pointer hover:bg-slate-50" : ""}"
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between min-h-[110px] transition-all duration-200 ${cardHoverClass} ${dimClass}"
+             style="border-left: 5px solid ${leftBorderColor}"
              ${clickable ? `data-cell data-dipendente="${dip.id}" data-data="${iso}"` : ""}>
-          <span class="font-medium text-slate-700 inline-flex items-center">${dip.nome} ${dip.cognome}${repartoNome}</span>
-          <span>${bodyHtml}</span>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h4 class="font-bold text-slate-800 text-base leading-tight">${dip.nome} ${dip.cognome}</h4>
+              <p class="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wider">${ruoloLabel}</p>
+            </div>
+            ${repartoBadge}
+          </div>
+          <div class="mt-4 flex items-center justify-between border-t border-slate-100/80 pt-3">
+            <span class="text-xs text-slate-400 font-medium">Orario turno:</span>
+            ${statusHtml}
+          </div>
         </div>
       `;
     })
     .join("");
 
-  setContentHtml(`<div class="divide-y divide-slate-100">${cards}</div>`);
+  setContentHtml(`<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-2">${cards}</div>`);
 
   attachCellHandlers();
 }

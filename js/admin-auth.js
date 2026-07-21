@@ -17,7 +17,7 @@ import {
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
-import { auth } from "./app.js?v=35";
+import { auth } from "./app.js?v=36";
 
 // Crea il primo accesso per un'email che non ha ancora un account Authentication.
 // Lancia "auth/email-already-in-use" se l'account esiste già (va usato inviaResetPassword).
