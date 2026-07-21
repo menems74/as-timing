@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=34";
+import { requireSession } from "./auth.js?v=35";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,8 +17,8 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=34";
-import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=34";
+} from "./data.js?v=35";
+import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=35";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -171,6 +171,7 @@ let dragSource = null; // { dipendenteId, dataISO }
 // --- Rendering label periodo ---
 
 function updatePeriodLabel() {
+  const todayISO = toISO(new Date());
   if (state.view === "mese" || state.view === "analisi") {
     periodLabel.textContent = `${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}`;
   } else if (state.view === "settimana") {
@@ -182,7 +183,8 @@ function updatePeriodLabel() {
       : `${start.getDate()} ${MESI[start.getMonth()]} – ${end.getDate()} ${MESI[end.getMonth()]} ${end.getFullYear()}`;
   } else {
     const dow = (state.refDate.getDay() + 6) % 7;
-    periodLabel.textContent = `${GIORNI_SETT_LUNGHI[dow]} ${state.refDate.getDate()} ${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}`;
+    const isToday = toISO(state.refDate) === todayISO;
+    periodLabel.textContent = `${GIORNI_SETT_LUNGHI[dow]} ${state.refDate.getDate()} ${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}${isToday ? " (Oggi)" : ""}`;
   }
 }
 
@@ -228,10 +230,13 @@ function buildCellaHtml(dipendenteId, dataISO) {
 function renderGrid(days) {
   const dipendenti = cache.dipendenti;
   const chiusura = days.map((d) => isGiornoChiusura(d, cache.impostazioni));
+  const todayISO = toISO(new Date());
 
   const headerCells = days
     .map((d, i) => {
       const dow = (d.getDay() + 6) % 7;
+      const isToday = toISO(d) === todayISO;
+      const todayClass = isToday ? "bg-blue-50/50 border-x border-blue-200/50" : "";
       const cls = chiusura[i]
         ? "bg-slate-50 text-slate-400"
         : isSunday(d)
@@ -239,9 +244,14 @@ function renderGrid(days) {
         : isWeekend(d)
         ? "text-slate-500"
         : "text-slate-600";
-      return `<th class="px-1 py-2 text-center font-medium ${cls} min-w-[2.75rem]">
+      
+      const dateNumHtml = isToday
+        ? `<div class="flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white font-semibold shadow-sm mx-auto">${d.getDate()}</div>`
+        : `<div>${d.getDate()}</div>`;
+
+      return `<th class="px-1 py-2 text-center font-medium ${cls} ${todayClass} min-w-[2.75rem]">
         <div class="text-[10px]">${GIORNI_SETT[dow]}</div>
-        <div>${d.getDate()}</div>
+        ${dateNumHtml}
       </th>`;
     })
     .join("");
@@ -251,12 +261,14 @@ function renderGrid(days) {
       const cells = days
         .map((d, i) => {
           const iso = toISO(d);
+          const isToday = iso === todayISO;
+          const todayCellClass = isToday ? "bg-blue-50/30 border-x border-blue-200/40" : "";
           if (chiusura[i]) {
-            return `<td class="px-1 py-1">
+            return `<td class="px-1 py-1 ${todayCellClass}">
               <div class="h-10 rounded border border-dashed border-slate-200 bg-slate-50 text-slate-300 text-[11px] flex items-center justify-center font-medium" title="Negozio chiuso">C</div>
             </td>`;
           }
-          return `<td class="px-1 py-1" data-cell data-dipendente="${dip.id}" data-data="${iso}">
+          return `<td class="px-1 py-1 ${todayCellClass}" data-cell data-dipendente="${dip.id}" data-data="${iso}">
             ${buildCellaHtml(dip.id, iso)}
           </td>`;
         })
@@ -349,9 +361,13 @@ async function renderAnalisiReparti() {
     return;
   }
 
+  const todayISO = toISO(new Date());
+
   const headerCells = days
     .map((d, i) => {
       const dow = (d.getDay() + 6) % 7;
+      const isToday = toISO(d) === todayISO;
+      const todayClass = isToday ? "bg-blue-50/50 border-x border-blue-200/50" : "";
       const cls = chiusura[i]
         ? "bg-slate-50 text-slate-400"
         : isSunday(d)
@@ -359,9 +375,14 @@ async function renderAnalisiReparti() {
         : isWeekend(d)
         ? "text-slate-500"
         : "text-slate-600";
-      return `<th class="px-1 py-2 text-center font-medium ${cls} min-w-[2.75rem]">
+
+      const dateNumHtml = isToday
+        ? `<div class="flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white font-semibold shadow-sm mx-auto">${d.getDate()}</div>`
+        : `<div>${d.getDate()}</div>`;
+
+      return `<th class="px-1 py-2 text-center font-medium ${cls} ${todayClass} min-w-[2.75rem]">
         <div class="text-[10px]">${GIORNI_SETT[dow]}</div>
-        <div>${d.getDate()}</div>
+        ${dateNumHtml}
       </th>`;
     })
     .join("");
@@ -371,9 +392,12 @@ async function renderAnalisiReparti() {
       const cellsPer = (slot) =>
         days
           .map((d, i) => {
-            if (chiusura[i]) return `<td class="px-1 py-1">${chiusaCellaHtml()}</td>`;
+            const iso = toISO(d);
+            const isToday = iso === todayISO;
+            const todayCellClass = isToday ? "bg-blue-50/30 border-x border-blue-200/40" : "";
+            if (chiusura[i]) return `<td class="px-1 py-1 ${todayCellClass}">${chiusaCellaHtml()}</td>`;
             const cov = contaCopertura(r, toISO(d), dipendenti);
-            return `<td class="px-1 py-1">${contaCellaHtml(cov[slot], r.colore)}</td>`;
+            return `<td class="px-1 py-1 ${todayCellClass}">${contaCellaHtml(cov[slot], r.colore)}</td>`;
           })
           .join("");
 
