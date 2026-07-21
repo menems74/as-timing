@@ -1,13 +1,13 @@
-import { requireSession } from "./auth.js?v=39";
+import { requireSession } from "./auth.js?v=40";
 import {
   getDipendenti,
   getDipendentiTurnabili,
   getTurniRange,
   getTurniPerDipendente,
   turnoKey,
-  setTurno,
+  setTurnoGiorno,
   removeTurno,
-  moveTurno,
+  moveSlot,
   isInFerie,
   getFerie,
   getFeriePerDipendente,
@@ -17,8 +17,16 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=39";
-import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=39";
+} from "./data.js?v=40";
+import {
+  pianificaMese,
+  analizzaMese,
+  settimaneDelMese,
+  SLOTS,
+  SLOT_LABEL,
+  CAMPI_SLOT,
+  slotAttivo,
+} from "./algoritmo.js?v=40";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -39,14 +47,6 @@ const GIORNI_SETT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 const GIORNI_SETT_LUNGHI = [
   "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica",
 ];
-
-const TIPO_LABEL = { mattina: "Mattina", pomeriggio: "Pomeriggio", giornata: "Giornata intera" };
-// Solo bordo colorato, sfondo neutro.
-const TIPO_BORDER = {
-  mattina: "border-sky-400 text-sky-700",
-  pomeriggio: "border-emerald-400 text-emerald-700",
-  giornata: "border-violet-400 text-violet-700",
-};
 
 const state = {
   view: "mese",
@@ -157,16 +157,31 @@ const modal = document.getElementById("turno-modal");
 const modalTitleNome = document.getElementById("modal-title-nome");
 const modalTitleData = document.getElementById("modal-title-data");
 const modalForm = document.getElementById("turno-form");
-const modalTipo = document.getElementById("modal-tipo");
-const modalOrario = document.getElementById("modal-orario");
-const modalReparto = document.getElementById("modal-reparto");
 const modalRepartoHint = document.getElementById("modal-reparto-hint");
-const modalBloccato = document.getElementById("modal-bloccato");
 const modalDeleteBtn = document.getElementById("modal-delete-btn");
 const modalCancelBtn = document.getElementById("modal-cancel-btn");
+const modalGiornataBtn = document.getElementById("modal-giornata-btn");
+
+// Riferimenti alle due sezioni indipendenti del modale (una per slot).
+const slotRefs = {
+  mattina: {
+    attiva: document.getElementById("modal-mattina-attiva"),
+    campi: document.getElementById("modal-mattina-campi"),
+    reparto: document.getElementById("modal-mattina-reparto"),
+    orario: document.getElementById("modal-mattina-orario"),
+    bloccato: document.getElementById("modal-mattina-bloccato"),
+  },
+  pomeriggio: {
+    attiva: document.getElementById("modal-pomeriggio-attiva"),
+    campi: document.getElementById("modal-pomeriggio-campi"),
+    reparto: document.getElementById("modal-pomeriggio-reparto"),
+    orario: document.getElementById("modal-pomeriggio-orario"),
+    bloccato: document.getElementById("modal-pomeriggio-bloccato"),
+  },
+};
 
 let modalTarget = null; // { dipendenteId, dataISO }
-let dragSource = null; // { dipendenteId, dataISO }
+let dragSource = null; // { dipendenteId, dataISO, slot }
 
 // --- Rendering label periodo ---
 
@@ -186,69 +201,54 @@ function updatePeriodLabel() {
   }
 }
 
-// --- Cella turno (usata da vista mese e settimana) ---
+// --- Cella turno (usata da vista mese e settimana): due metà indipendenti,
+// una per slot, colorate col colore del reparto (mai per tipo di turno) —
+// così un dipendente con reparti diversi a mattina e pomeriggio è leggibile
+// a colpo d'occhio ed è la cella stessa (per metà) il bersaglio di
+// drag&drop/click, non più l'intera giornata.
 
 function buildCellaHtml(dipendenteId, dataISO) {
   const turno = cache.turni[turnoKey(dipendenteId, dataISO)];
   const inFerie = isInFerie(dipendenteId, dataISO, cache.ferie);
-  const filtro = state.repartoFiltro;
-  const match = !filtro || (turno && turno.reparto === filtro);
-  const dimClass = match ? "" : "opacity-25";
 
   if (inFerie) {
-    return `<div class="h-10 rounded bg-orange-100 border border-orange-300 text-orange-800 text-[11px] flex items-center justify-center font-bold transition-opacity ${dimClass}" title="Ferie/Permesso">F</div>`;
+    return `<div class="h-10 rounded bg-orange-100 border border-orange-300 text-orange-800 text-[11px] flex items-center justify-center font-bold" title="Ferie/Permesso">F</div>`;
   }
 
-  if (!turno) {
-    const cursorClass = session.privileged ? "cursor-pointer hover:border-slate-400 hover:bg-slate-50" : "";
-    const hint = session.privileged ? "Doppio click per assegnare un turno" : "";
-    return `<div class="h-10 rounded border border-dashed border-slate-200 ${cursorClass} transition-opacity ${dimClass}" title="${hint}"></div>`;
-  }
+  const filtro = state.repartoFiltro;
 
-  const lockClass = turno.bloccato ? "ring-2 ring-red-400" : "";
-  const cursorClass = session.privileged ? "cursor-pointer" : "";
-  const reparto = turno.reparto ? repartoByNome(turno.reparto, cache.reparti) : null;
+  const halfHtml = (slot) => {
+    const c = CAMPI_SLOT[slot];
+    const attivo = slotAttivo(turno, slot);
+    const cursorClass = session.privileged ? "cursor-pointer" : "";
 
-  // Stile cella basato sul reparto (sfondo soft, bordo medio)
-  let cellStyle = "";
-  let borderClass = "";
-  const repColore = reparto ? reparto.colore : "#3b82f6"; // default blue
+    if (!attivo) {
+      const hint = session.privileged ? `Doppio click: assegna ${SLOT_LABEL[slot]}` : "";
+      return `<div class="flex-1 h-10 rounded border border-dashed border-slate-200 ${cursorClass} hover:border-slate-400 hover:bg-slate-50 transition-colors" data-slot="${slot}" title="${hint}"></div>`;
+    }
 
-  if (reparto) {
-    cellStyle = `background-color: ${reparto.colore}20; border-color: ${reparto.colore}70;`;
-    borderClass = "border-[1.5px]";
-  } else {
-    cellStyle = "background-color: #f8fafc; border-color: #cbd5e1;";
-    borderClass = "border-[1.5px]";
-  }
+    const repNome = turno[c.reparto];
+    const reparto = repartoByNome(repNome, cache.reparti);
+    const bloccato = !!turno[c.bloccato];
+    const dimClass = filtro && repNome !== filtro ? "opacity-25" : "";
+    const style = reparto
+      ? `background-color:${reparto.colore}22;border-color:${reparto.colore}80;`
+      : "background-color:#f8fafc;border-color:#cbd5e1;";
+    const lockClass = bloccato ? "ring-2 ring-red-400" : "";
+    const lockIcon = bloccato ? `<span class="text-[8px] leading-none">🔒</span>` : "";
+    const title = `${SLOT_LABEL[slot]}${turno[c.orario] ? " · " + turno[c.orario] : ""} · ${repNome}`;
 
-  const morningColor = "#0284c7"; // Azzurro Polvere
-  const afternoonColor = "#1e3a8a"; // Blu Navy
-
-  const leftSegmentStyle = (turno.tipo === "mattina" || turno.tipo === "giornata")
-    ? `background-color: ${morningColor};`
-    : "background-color: transparent;";
-
-  const rightSegmentStyle = (turno.tipo === "pomeriggio" || turno.tipo === "giornata")
-    ? `background-color: ${afternoonColor};`
-    : "background-color: transparent;";
-
-  const lockHtml = turno.bloccato ? `<span class="text-[9px] leading-none mb-0.5" title="Bloccato">🔒</span>` : "";
-
-  return `
-    <div class="h-10 rounded ${borderClass} ${lockClass} ${dimClass} ${cursorClass} flex items-center justify-center select-none transition-opacity"
-         style="${cellStyle}"
-         title="${TIPO_LABEL[turno.tipo]}${turno.orario ? " · " + turno.orario : ""}${turno.reparto ? " · " + turno.reparto : ""}"
-         draggable="${!!(session.privileged && !turno.bloccato)}">
-      <div class="flex flex-col items-center justify-center w-full h-full gap-0.5">
-        ${lockHtml}
-        <div class="w-8 h-2.5 rounded-full bg-white border border-slate-200/80 p-[1px] flex gap-[1px]">
-          <div class="h-full w-1/2 rounded-l-full" style="${leftSegmentStyle}"></div>
-          <div class="h-full w-1/2 rounded-r-full" style="${rightSegmentStyle}"></div>
-        </div>
+    return `
+      <div class="flex-1 h-10 rounded border ${lockClass} ${dimClass} ${cursorClass} flex flex-col items-center justify-center gap-0.5 select-none transition-opacity"
+           style="${style}" title="${title}" data-slot="${slot}"
+           draggable="${!!(session.privileged && !bloccato)}">
+        ${lockIcon}
+        <span class="text-[9px] font-semibold text-slate-600 truncate max-w-full px-0.5 leading-none">${repNome.slice(0, 4)}</span>
       </div>
-    </div>
-  `;
+    `;
+  };
+
+  return `<div class="h-10 flex gap-0.5">${halfHtml("mattina")}${halfHtml("pomeriggio")}</div>`;
 }
 
 // --- Vista Mese / Settimana (griglia dipendenti x giorni) ---
@@ -270,7 +270,7 @@ function renderGrid(days) {
         : isWeekend(d)
         ? "text-slate-500"
         : "text-slate-600";
-      
+
       const dateNumHtml = isToday
         ? `<div class="flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white font-semibold shadow-sm mx-auto">${d.getDate()}</div>`
         : `<div>${d.getDate()}</div>`;
@@ -352,10 +352,10 @@ function contaCopertura(reparto, iso, dipendenti) {
   const pomeriggio = [];
   for (const dip of dipendenti) {
     const turno = cache.turni[turnoKey(dip.id, iso)];
-    if (!turno || turno.reparto !== reparto.nome) continue;
+    if (!turno) continue;
     const nome = `${dip.nome} ${dip.cognome}`;
-    if (turno.tipo === "mattina" || turno.tipo === "giornata") mattina.push(nome);
-    if (turno.tipo === "pomeriggio" || turno.tipo === "giornata") pomeriggio.push(nome);
+    if (turno.repartoMattina === reparto.nome) mattina.push(nome);
+    if (turno.repartoPomeriggio === reparto.nome) pomeriggio.push(nome);
   }
   return { mattina, pomeriggio };
 }
@@ -464,7 +464,12 @@ async function renderAnalisiReparti() {
   `);
 }
 
-// --- Vista Giorno (card per dipendente) ---
+// --- Vista Giorno (card per dipendente, uno slot per riga) ---
+
+function repartoPrincipale(turno) {
+  if (!turno) return "";
+  return turno.repartoMattina || turno.repartoPomeriggio || "";
+}
 
 async function renderGiorno() {
   const dipendenti = cache.dipendenti;
@@ -483,7 +488,7 @@ async function renderGiorno() {
   }
 
   // Ordina i dipendenti:
-  // 1. Chi lavora (ordinato per nome reparto alfabetico)
+  // 1. Chi lavora (ordinato per reparto principale alfabetico)
   // 2. Chi è in ferie / permesso
   // 3. Chi non ha turno
   const sortedDipendenti = [...dipendenti].sort((a, b) => {
@@ -492,19 +497,15 @@ async function renderGiorno() {
     const aTurno = cache.turni[turnoKey(a.id, iso)];
     const bTurno = cache.turni[turnoKey(b.id, iso)];
 
-    const aCat = aTurno ? 0 : (aInFerie ? 1 : 2);
-    const bCat = bTurno ? 0 : (bInFerie ? 1 : 2);
+    const aCat = aTurno ? 0 : aInFerie ? 1 : 2;
+    const bCat = bTurno ? 0 : bInFerie ? 1 : 2;
 
-    if (aCat !== bCat) {
-      return aCat - bCat;
-    }
+    if (aCat !== bCat) return aCat - bCat;
 
     if (aCat === 0) {
-      const aRep = aTurno.reparto || "";
-      const bRep = bTurno.reparto || "";
-      if (aRep !== bRep) {
-        return aRep.localeCompare(bRep);
-      }
+      const aRep = repartoPrincipale(aTurno);
+      const bRep = repartoPrincipale(bTurno);
+      if (aRep !== bRep) return aRep.localeCompare(bRep);
     }
 
     const aFull = `${a.cognome} ${a.nome}`.toLowerCase();
@@ -512,79 +513,79 @@ async function renderGiorno() {
     return aFull.localeCompare(bFull);
   });
 
+  const filtro = state.repartoFiltro;
+
   const cards = sortedDipendenti
     .map((dip) => {
       const inFerie = isInFerie(dip.id, iso, cache.ferie);
       const turno = cache.turni[turnoKey(dip.id, iso)];
-
-      const filtro = state.repartoFiltro;
-      const match = !filtro || (turno && turno.reparto === filtro);
+      const match = !filtro || (turno && (turno.repartoMattina === filtro || turno.repartoPomeriggio === filtro));
       const dimClass = match ? "" : "opacity-30";
 
-      let statusHtml = "";
-      let reparto = null;
       let leftBorderColor = "#cbd5e1"; // slate-300 default
+      let bodyHtml;
 
       if (inFerie) {
         leftBorderColor = "#fb923c"; // orange-400
-        statusHtml = `
-          <div class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-orange-50 text-orange-800 border border-orange-200 transition-opacity ${dimClass}">
+        bodyHtml = `
+          <div class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-orange-50 text-orange-800 border border-orange-200">
             <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
             Ferie/Permesso
           </div>
         `;
       } else if (turno) {
-        reparto = turno.reparto ? repartoByNome(turno.reparto, cache.reparti) : null;
-        if (reparto) {
-          leftBorderColor = reparto.colore;
-        } else {
-          leftBorderColor = "#3b82f6"; // blue-500 default
-        }
-        
-        const badgeClass = `bg-white border ${TIPO_BORDER[turno.tipo]}`;
-        statusHtml = `
-          <div class="flex flex-wrap items-center gap-1.5">
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass} transition-opacity ${dimClass}">
-              ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}
-            </span>
-            ${turno.orario ? `<span class="text-xs font-semibold text-slate-700 transition-opacity ${dimClass}">${turno.orario}</span>` : ""}
-          </div>
-        `;
+        const repPrincipaleNome = repartoPrincipale(turno);
+        const repPrincipale = repPrincipaleNome ? repartoByNome(repPrincipaleNome, cache.reparti) : null;
+        leftBorderColor = repPrincipale ? repPrincipale.colore : "#3b82f6";
+
+        const rigaSlot = (slot) => {
+          const c = CAMPI_SLOT[slot];
+          const repNome = turno[c.reparto];
+          if (!repNome) {
+            return `<div class="flex items-center justify-between text-[11px] text-slate-300 italic">
+              <span>${SLOT_LABEL[slot]}</span><span>—</span>
+            </div>`;
+          }
+          const reparto = repartoByNome(repNome, cache.reparti);
+          const colore = reparto ? reparto.colore : "#3b82f6";
+          const bloccato = !!turno[c.bloccato];
+          return `
+            <div class="flex items-center justify-between gap-1.5 text-[11px]">
+              <span class="text-slate-400 font-medium shrink-0">${SLOT_LABEL[slot]}</span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-bold text-slate-700 border truncate"
+                    style="background:${colore}18; border-color:${colore}60;">
+                ${bloccato ? "🔒 " : ""}${repNome}
+              </span>
+              ${turno[c.orario] ? `<span class="text-slate-500 font-medium shrink-0">${turno[c.orario]}</span>` : ""}
+            </div>
+          `;
+        };
+
+        bodyHtml = `<div class="space-y-1.5">${rigaSlot("mattina")}${rigaSlot("pomeriggio")}</div>`;
       } else {
-        statusHtml = `
-          <span class="text-[10px] font-medium text-slate-400 transition-opacity ${dimClass} italic bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+        bodyHtml = `
+          <span class="text-[10px] font-medium text-slate-400 italic bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
             Nessun turno
           </span>
         `;
       }
 
-      const repartoBadge = reparto
-        ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-700 border transition-opacity ${dimClass}"
-                style="background:${reparto.colore}18; border-color:${reparto.colore}60;">
-            <span class="w-1.5 h-1.5 rounded-full inline-block" style="background:${reparto.colore}"></span>${reparto.nome}
-          </span>`
-        : "";
-
-      const ruoloLabel = dip.ruolo ? (dip.ruolo.charAt(0).toUpperCase() + dip.ruolo.slice(1)) : "Dipendente";
+      const ruoloLabel = dip.ruolo ? dip.ruolo.charAt(0).toUpperCase() + dip.ruolo.slice(1) : "Dipendente";
       const clickable = session.privileged && !inFerie;
-      const cardHoverClass = clickable 
-        ? "cursor-pointer hover:shadow-md hover:border-slate-300 hover:bg-slate-50/50 hover:-translate-y-0.5 active:translate-y-0" 
+      const cardHoverClass = clickable
+        ? "cursor-pointer hover:shadow-md hover:border-slate-300 hover:bg-slate-50/50 hover:-translate-y-0.5 active:translate-y-0"
         : "bg-white";
 
       return `
         <div class="bg-white rounded-lg border border-slate-200 shadow-sm p-3 flex flex-col justify-between min-h-[85px] transition-all duration-200 ${cardHoverClass} ${dimClass}"
              style="border-left: 5px solid ${leftBorderColor}"
              ${clickable ? `data-cell data-dipendente="${dip.id}" data-data="${iso}"` : ""}>
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <h4 class="font-bold text-slate-800 text-sm leading-tight">${dip.nome} ${dip.cognome}</h4>
-              <p class="text-[9px] font-semibold text-slate-400 mt-0.5 uppercase tracking-wider">${ruoloLabel}</p>
-            </div>
-            ${repartoBadge}
+          <div class="mb-1.5">
+            <h4 class="font-bold text-slate-800 text-sm leading-tight">${dip.nome} ${dip.cognome}</h4>
+            <p class="text-[9px] font-semibold text-slate-400 mt-0.5 uppercase tracking-wider">${ruoloLabel}</p>
           </div>
-          <div class="mt-2 flex items-center justify-between border-t border-slate-100/80 pt-2">
-            <span class="text-[11px] text-slate-400 font-medium">Orario turno:</span>
-            ${statusHtml}
+          <div class="border-t border-slate-100/80 pt-2">
+            ${bodyHtml}
           </div>
         </div>
       `;
@@ -596,84 +597,99 @@ async function renderGiorno() {
   attachCellHandlers();
 }
 
-// --- Interazioni cella: click per aprire modale, drag & drop ---
+// --- Interazioni cella: click per aprire modale, drag & drop per singolo slot ---
 
 function attachCellHandlers() {
   if (!session.privileged) return; // sola lettura: nessuna modifica possibile
 
-  content.querySelectorAll("[data-cell]").forEach((cell) => {
-    if (state.view === "giorno") {
+  if (state.view === "giorno") {
+    content.querySelectorAll("[data-cell]").forEach((cell) => {
       cell.addEventListener("click", () => openModal(cell.dataset.dipendente, cell.dataset.data));
-      return;
-    }
-
-    cell.addEventListener("dblclick", () => openModal(cell.dataset.dipendente, cell.dataset.data));
-
-    const inner = cell.querySelector("[draggable]");
-    if (inner) {
-      inner.addEventListener("dragstart", (e) => {
-        dragSource = { dipendenteId: cell.dataset.dipendente, dataISO: cell.dataset.data };
-        e.dataTransfer.effectAllowed = "move";
-      });
-    }
-
-    cell.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      cell.classList.add("bg-slate-100");
     });
-    cell.addEventListener("dragleave", () => cell.classList.remove("bg-slate-100"));
-    cell.addEventListener("drop", async (e) => {
-      e.preventDefault();
-      cell.classList.remove("bg-slate-100");
-      if (!dragSource) return;
+    return;
+  }
 
-      const targetDipendenteId = cell.dataset.dipendente;
-      const targetDataISO = cell.dataset.data;
-      const targetInFerie = isInFerie(targetDipendenteId, targetDataISO, cache.ferie);
+  content.querySelectorAll("[data-cell]").forEach((cell) => {
+    const dipendenteId = cell.dataset.dipendente;
+    const dataISO = cell.dataset.data;
 
-      if (targetInFerie) {
-        alert("Il dipendente è in ferie/permesso in questo giorno.");
-      } else {
-        try {
-          await moveTurno(dragSource.dipendenteId, dragSource.dataISO, targetDipendenteId, targetDataISO);
-          await renderCurrentView();
-        } catch (err) {
-          if (err.message === "CELLA_OCCUPATA") {
-            alert("La cella di destinazione ha già un turno assegnato.");
-          } else if (err.message === "TURNO_NON_SPOSTABILE") {
-            alert("Questo turno non è più spostabile (è stato bloccato o rimosso nel frattempo).");
-          } else {
-            alert("Errore durante lo spostamento del turno. Riprova.");
-          }
-          await renderCurrentView();
-        }
+    cell.querySelectorAll("[data-slot]").forEach((slotEl) => {
+      slotEl.addEventListener("dblclick", () => openModal(dipendenteId, dataISO));
+
+      if (slotEl.getAttribute("draggable") === "true") {
+        slotEl.addEventListener("dragstart", (e) => {
+          dragSource = { dipendenteId, dataISO, slot: slotEl.dataset.slot };
+          e.dataTransfer.effectAllowed = "move";
+        });
       }
-      dragSource = null;
+
+      slotEl.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        slotEl.classList.add("bg-slate-200");
+      });
+      slotEl.addEventListener("dragleave", () => slotEl.classList.remove("bg-slate-200"));
+      slotEl.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        slotEl.classList.remove("bg-slate-200");
+        if (!dragSource) return;
+
+        const targetSlot = slotEl.dataset.slot;
+        const targetInFerie = isInFerie(dipendenteId, dataISO, cache.ferie);
+
+        if (targetInFerie) {
+          alert("Il dipendente è in ferie/permesso in questo giorno.");
+        } else {
+          try {
+            await moveSlot(dragSource.dipendenteId, dragSource.dataISO, dragSource.slot, dipendenteId, dataISO, targetSlot);
+            await renderCurrentView();
+          } catch (err) {
+            if (err.message === "CELLA_OCCUPATA") {
+              alert("Lo slot di destinazione ha già un turno assegnato.");
+            } else if (err.message === "TURNO_NON_SPOSTABILE") {
+              alert("Questo turno non è più spostabile (è stato bloccato o rimosso nel frattempo).");
+            } else {
+              alert("Errore durante lo spostamento del turno. Riprova.");
+            }
+            await renderCurrentView();
+          }
+        }
+        dragSource = null;
+      });
     });
   });
 }
 
-// --- Modale turno ---
+// --- Modale turno: due sezioni indipendenti (Mattina/Pomeriggio) più la
+// scorciatoia "Giornata intera" che le compila insieme in un click. ---
 
-function populateModalReparto(dipendenteId, repartoSelezionato) {
+function populateSelectReparto(selectEl, dipendenteId, repartoSelezionato) {
   const tuttiReparti = cache.reparti.map((r) => r.nome);
   const compatibili = repartiDiDipendente(dipendenteId, cache.reparti).map((r) => r.nome);
 
-  modalReparto.innerHTML =
+  selectEl.innerHTML =
     tuttiReparti.length === 0
       ? `<option value="">Nessun reparto disponibile</option>`
       : tuttiReparti.map((nome) => `<option value="${nome}">${nome}</option>`).join("");
 
-  modalReparto.value = repartoSelezionato || compatibili[0] || tuttiReparti[0] || "";
+  selectEl.value = repartoSelezionato || compatibili[0] || tuttiReparti[0] || "";
 
-  if (compatibili.length === 0 && tuttiReparti.length > 0) {
-    modalRepartoHint.textContent =
-      "Nessun reparto assegnato a questo dipendente in Impostazioni → Reparti: puoi comunque scegliere tra tutti quelli disponibili.";
-    modalRepartoHint.classList.remove("hidden");
-  } else {
-    modalRepartoHint.classList.add("hidden");
-  }
+  return compatibili.length === 0 && tuttiReparti.length > 0;
 }
+
+function orarioDefaultPerSlot(slot) {
+  return (cache.impostazioni?.orariDefault || {})[slot] || "";
+}
+
+function refreshSlotEnabled(slot) {
+  const r = slotRefs[slot];
+  const on = r.attiva.checked;
+  r.campi.classList.toggle("opacity-40", !on);
+  r.campi.classList.toggle("pointer-events-none", !on);
+}
+
+SLOTS.forEach((slot) => {
+  slotRefs[slot].attiva.addEventListener("change", () => refreshSlotEnabled(slot));
+});
 
 function openModal(dipendenteId, dataISO) {
   if (isInFerie(dipendenteId, dataISO, cache.ferie)) return;
@@ -685,32 +701,42 @@ function openModal(dipendenteId, dataISO) {
   modalTitleNome.textContent = dip ? `${dip.nome} ${dip.cognome}` : "";
   modalTitleData.textContent = dataISO.split("-").reverse().join("/");
 
-  if (turno) {
-    modalTipo.value = turno.tipo;
-    modalOrario.value = turno.orario || "";
-    populateModalReparto(dipendenteId, turno.reparto || "");
-    modalBloccato.checked = !!turno.bloccato;
-    modalDeleteBtn.classList.remove("hidden");
-  } else {
-    modalForm.reset();
-    populateModalReparto(dipendenteId, "");
-    modalOrario.value = orarioDefaultPerTipo(modalTipo.value);
-    modalBloccato.checked = false;
-    modalDeleteBtn.classList.add("hidden");
+  let mancaCompatibile = false;
+  for (const slot of SLOTS) {
+    const r = slotRefs[slot];
+    const c = CAMPI_SLOT[slot];
+    const attivo = slotAttivo(turno, slot);
+    r.attiva.checked = attivo;
+    const senzaCompat = populateSelectReparto(r.reparto, dipendenteId, attivo ? turno[c.reparto] : "");
+    mancaCompatibile = mancaCompatibile || senzaCompat;
+    r.orario.value = attivo ? turno[c.orario] || "" : orarioDefaultPerSlot(slot);
+    r.bloccato.checked = attivo && !!turno[c.bloccato];
+    refreshSlotEnabled(slot);
   }
+
+  if (mancaCompatibile) {
+    modalRepartoHint.textContent =
+      "Nessun reparto assegnato a questo dipendente in Impostazioni → Reparti: puoi comunque scegliere tra tutti quelli disponibili.";
+    modalRepartoHint.classList.remove("hidden");
+  } else {
+    modalRepartoHint.classList.add("hidden");
+  }
+
+  modalDeleteBtn.classList.toggle("hidden", !turno);
 
   modal.classList.remove("hidden");
   modal.classList.add("flex");
 }
 
-function orarioDefaultPerTipo(tipo) {
-  return (cache.impostazioni?.orariDefault || {})[tipo] || "";
-}
-
-modalTipo.addEventListener("change", () => {
-  const isNuovoTurno = modalDeleteBtn.classList.contains("hidden");
-  if (isNuovoTurno) {
-    modalOrario.value = orarioDefaultPerTipo(modalTipo.value);
+modalGiornataBtn.addEventListener("click", () => {
+  const repartoComune = slotRefs.mattina.reparto.value || slotRefs.pomeriggio.reparto.value;
+  const orarioGiornata = orarioDefaultPerSlot("giornata");
+  for (const slot of SLOTS) {
+    const r = slotRefs[slot];
+    r.attiva.checked = true;
+    if (repartoComune) r.reparto.value = repartoComune;
+    r.orario.value = orarioGiornata;
+    refreshSlotEnabled(slot);
   }
 });
 
@@ -724,13 +750,16 @@ modalForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!modalTarget) return;
 
+  const payload = {};
+  for (const slot of SLOTS) {
+    const r = slotRefs[slot];
+    payload[slot] = r.attiva.checked
+      ? { reparto: r.reparto.value.trim(), orario: r.orario.value.trim(), bloccato: r.bloccato.checked }
+      : null;
+  }
+
   try {
-    await setTurno(modalTarget.dipendenteId, modalTarget.dataISO, {
-      tipo: modalTipo.value,
-      orario: modalOrario.value.trim(),
-      reparto: modalReparto.value.trim(),
-      bloccato: modalBloccato.checked,
-    });
+    await setTurnoGiorno(modalTarget.dipendenteId, modalTarget.dataISO, payload);
     closeModal();
     await renderCurrentView();
   } catch (err) {
@@ -880,8 +909,8 @@ if (elaboraBtn) {
   elaboraBtn.addEventListener("click", async () => {
     const imp = await getImpostazioni();
     const oreT = imp.oreTurno || {};
-    if (!(oreT.mattina > 0) || !(oreT.pomeriggio > 0) || !(oreT.giornata > 0)) {
-      alert("Prima di elaborare imposta le durate in ore dei tre tipi turno in Impostazioni → Generali.");
+    if (!(oreT.mattina > 0) || !(oreT.pomeriggio > 0)) {
+      alert("Prima di elaborare imposta le durate in ore di mattina e pomeriggio in Impostazioni → Generali.");
       return;
     }
     const reparti = await getReparti();
@@ -893,7 +922,7 @@ if (elaboraBtn) {
     const label = `${MESI[state.refDate.getMonth()]} ${state.refDate.getFullYear()}`;
     if (
       !confirm(
-        `Pianificare automaticamente ${label}?\n\nI turni non bloccati delle settimane del mese verranno riorganizzati; quelli bloccati (🔒) restano intatti.`
+        `Pianificare automaticamente ${label}?\n\nGli slot non bloccati delle settimane del mese verranno riorganizzati; quelli bloccati (🔒) restano intatti.`
       )
     )
       return;
@@ -922,7 +951,7 @@ if (elaboraBtn) {
       mostraReport(
         r,
         `Periodo ${formatISO(r.dallISO)} – ${formatISO(r.alISO)} (${r.settimane} settimane): ` +
-          `${esito.daScrivere.length} turni creati, ${esito.daEliminare.length} rimossi.`
+          `${esito.daScrivere.length} giorni pianificati, ${esito.daEliminare.length} rimossi.`
       );
     } catch (err) {
       // Le scritture avvengono a blocchi: un errore a metà può lasciare uno stato

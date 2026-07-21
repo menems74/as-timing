@@ -18,12 +18,14 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   query,
   where,
   writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=39";
+import { db } from "./app.js?v=40";
+import { CAMPI_SLOT } from "./algoritmo.js?v=40";
 
 export const MAX_REPARTI = 4;
 
@@ -111,7 +113,13 @@ export async function deleteDipendente(id) {
 }
 
 // --- Turni ---
-// Doc id: `${dipendenteId}_${dataISO}`. Campi: { dipendenteId, dataISO, tipo, orario, reparto, bloccato }.
+// Doc id: `${dipendenteId}_${dataISO}`. Un dipendente può lavorare in due
+// reparti diversi nello stesso giorno (es. mattina in Cassa, pomeriggio in
+// Gialla): il documento porta due slot indipendenti come campi piatti,
+// repartoMattina/orarioMattina/bloccatoMattina e i tre equivalenti per
+// Pomeriggio (mappatura in CAMPI_SLOT, js/algoritmo.js). Uno slot è "attivo"
+// se il suo campo reparto è valorizzato; se nessuno slot è attivo il
+// documento non deve esistere (vedi setTurnoGiorno/moveSlot sotto).
 
 export function turnoKey(dipendenteId, dataISO) {
   return `${dipendenteId}_${dataISO}`;
@@ -142,36 +150,110 @@ export async function getTurniPerDipendente(dipendenteId) {
   return out;
 }
 
-export async function setTurno(dipendenteId, dataISO, turno) {
+// Scrive entrambi gli slot del giorno in un colpo solo (il modale li presenta
+// insieme). slotMattina/slotPomeriggio sono `{ reparto, orario, bloccato }`
+// per attivare/aggiornare lo slot, o `null` per disattivarlo/lasciarlo vuoto.
+// Se dopo la scrittura nessuno slot resta attivo, il documento viene rimosso
+// per evitare record orfani.
+export async function setTurnoGiorno(dipendenteId, dataISO, { mattina, pomeriggio }) {
   const ref = doc(turniCol, turnoKey(dipendenteId, dataISO));
-  await setDoc(ref, { dipendenteId, dataISO, ...turno });
+  if (!mattina && !pomeriggio) {
+    await deleteDoc(ref);
+    return;
+  }
+  const patch = { dipendenteId, dataISO };
+  for (const [slot, dati] of [["mattina", mattina], ["pomeriggio", pomeriggio]]) {
+    const c = CAMPI_SLOT[slot];
+    if (dati) {
+      patch[c.reparto] = dati.reparto;
+      patch[c.orario] = dati.orario || "";
+      patch[c.bloccato] = !!dati.bloccato;
+    } else {
+      // merge:true lascerebbe intatto lo slot esistente: va ripulito esplicitamente.
+      patch[c.reparto] = deleteField();
+      patch[c.orario] = deleteField();
+      patch[c.bloccato] = deleteField();
+    }
+  }
+  await setDoc(ref, patch, { merge: true });
 }
 
 export async function removeTurno(dipendenteId, dataISO) {
   await deleteDoc(doc(turniCol, turnoKey(dipendenteId, dataISO)));
 }
 
-// Errori possibili: "TURNO_NON_SPOSTABILE" (il turno di partenza non esiste più
+// Errori possibili: "TURNO_NON_SPOSTABILE" (lo slot di partenza non esiste più
 // o è stato bloccato nel frattempo), "CELLA_OCCUPATA" (qualcun altro ha già
-// assegnato un turno nella cella di destinazione). Usa una transazione perché
-// la sola verifica lato client (cache) non basta se più persone modificano
-// il calendario nello stesso momento (Admin e Responsabile possono farlo insieme).
-export async function moveTurno(fromDipendenteId, fromDataISO, toDipendenteId, toDataISO) {
+// assegnato quello slot nella cella di destinazione, oppure è bloccato). Usa
+// una transazione perché la sola verifica lato client (cache) non basta se più
+// persone modificano il calendario nello stesso momento (Admin e Responsabile
+// possono farlo insieme).
+// Se lo spostamento svuota interamente il giorno di partenza (l'altro slot non
+// era attivo), il documento di partenza viene rimosso per evitare record orfani.
+// Caso speciale: stesso dipendente e stesso giorno (scambio mattina/pomeriggio
+// dello stesso turno) — è un solo documento, quindi una sola scrittura: se lo
+// slot di destinazione era già occupato, il suo contenuto torna nello slot di
+// partenza invece di andare perso.
+export async function moveSlot(fromDipendenteId, fromDataISO, fromSlot, toDipendenteId, toDataISO, toSlot) {
   const fromRef = doc(turniCol, turnoKey(fromDipendenteId, fromDataISO));
   const toRef = doc(turniCol, turnoKey(toDipendenteId, toDataISO));
+  const stessoDoc = fromDipendenteId === toDipendenteId && fromDataISO === toDataISO;
+  const cFrom = CAMPI_SLOT[fromSlot];
+  const cTo = CAMPI_SLOT[toSlot];
+
+  if (stessoDoc && fromSlot === toSlot) return; // nessuno spostamento reale
 
   await runTransaction(db, async (tx) => {
     const fromSnap = await tx.get(fromRef);
-    if (!fromSnap.exists() || fromSnap.data().bloccato) {
+    const fromData = fromSnap.exists() ? fromSnap.data() : null;
+    if (!fromData || !fromData[cFrom.reparto] || fromData[cFrom.bloccato]) {
       throw new Error("TURNO_NON_SPOSTABILE");
     }
+
+    const slotSpostato = {
+      [cTo.reparto]: fromData[cFrom.reparto],
+      [cTo.orario]: fromData[cFrom.orario] || "",
+      [cTo.bloccato]: false,
+    };
+
+    if (stessoDoc) {
+      if (fromData[cTo.reparto] && fromData[cTo.bloccato]) {
+        throw new Error("CELLA_OCCUPATA");
+      }
+      const patch = { ...slotSpostato };
+      if (fromData[cTo.reparto]) {
+        patch[cFrom.reparto] = fromData[cTo.reparto];
+        patch[cFrom.orario] = fromData[cTo.orario] || "";
+        patch[cFrom.bloccato] = false;
+      } else {
+        patch[cFrom.reparto] = deleteField();
+        patch[cFrom.orario] = deleteField();
+        patch[cFrom.bloccato] = deleteField();
+      }
+      tx.update(fromRef, patch);
+      return;
+    }
+
     const toSnap = await tx.get(toRef);
-    if (toSnap.exists()) {
+    const toData = toSnap.exists() ? toSnap.data() : null;
+    if (toData && toData[cTo.reparto]) {
       throw new Error("CELLA_OCCUPATA");
     }
-    const { dipendenteId, dataISO, ...turno } = fromSnap.data();
-    tx.set(toRef, { dipendenteId: toDipendenteId, dataISO: toDataISO, ...turno });
-    tx.delete(fromRef);
+
+    tx.set(toRef, { dipendenteId: toDipendenteId, dataISO: toDataISO, ...slotSpostato }, { merge: true });
+
+    const altroSlot = fromSlot === "mattina" ? "pomeriggio" : "mattina";
+    const cAltro = CAMPI_SLOT[altroSlot];
+    const restaAltroSlot = !!fromData[cAltro.reparto];
+    if (restaAltroSlot) {
+      tx.update(fromRef, {
+        [cFrom.reparto]: deleteField(),
+        [cFrom.orario]: deleteField(),
+        [cFrom.bloccato]: deleteField(),
+      });
+    } else {
+      tx.delete(fromRef);
+    }
   });
 }
 

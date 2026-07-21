@@ -60,35 +60,49 @@
 
   <!-- Modal inserimento/modifica turno -->
   <div id="turno-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
-      <h3 class="mb-4">
-        <div id="modal-title-nome" class="text-xl font-bold text-slate-900"></div>
-        <div id="modal-title-data" class="text-sm font-normal text-slate-500 mt-0.5"></div>
-      </h3>
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+      <div class="mb-4 flex items-start justify-between gap-2">
+        <h3>
+          <div id="modal-title-nome" class="text-xl font-bold text-slate-900"></div>
+          <div id="modal-title-data" class="text-sm font-normal text-slate-500 mt-0.5"></div>
+        </h3>
+        <button type="button" id="modal-giornata-btn"
+                class="shrink-0 text-xs px-2.5 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium whitespace-nowrap">
+          ☀️ Giornata intera
+        </button>
+      </div>
       <form id="turno-form" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Reparto</label>
-          <select id="modal-reparto"
-                  class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500"></select>
-          <p id="modal-reparto-hint" class="hidden text-xs text-amber-600 mt-1"></p>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Tipo turno</label>
-          <select id="modal-tipo" class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500">
-            <option value="mattina">Mattina</option>
-            <option value="pomeriggio">Pomeriggio</option>
-            <option value="giornata">Giornata intera</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Orario</label>
-          <input id="modal-orario" type="text" placeholder="es. 9:00-13:00"
-                 class="w-full rounded border-slate-300 focus:border-slate-500 focus:ring-slate-500" />
-        </div>
-        <label class="flex items-center gap-2 text-sm text-slate-700">
-          <input id="modal-bloccato" type="checkbox" class="rounded border-slate-300" />
-          Blocca turno (non sovrascrivibile dall'algoritmo)
-        </label>
+        <fieldset class="border border-slate-200 rounded-lg p-3">
+          <legend class="px-1 text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <input id="modal-mattina-attiva" type="checkbox" class="rounded border-slate-300" /> Mattina
+          </legend>
+          <div id="modal-mattina-campi" class="space-y-2 mt-1">
+            <select id="modal-mattina-reparto"
+                    class="w-full rounded border-slate-300 text-sm focus:border-slate-500 focus:ring-slate-500"></select>
+            <input id="modal-mattina-orario" type="text" placeholder="es. 9:00-13:00"
+                   class="w-full rounded border-slate-300 text-sm focus:border-slate-500 focus:ring-slate-500" />
+            <label class="flex items-center gap-2 text-xs text-slate-600">
+              <input id="modal-mattina-bloccato" type="checkbox" class="rounded border-slate-300" />
+              Blocca (non sovrascrivibile dall'algoritmo)
+            </label>
+          </div>
+        </fieldset>
+        <fieldset class="border border-slate-200 rounded-lg p-3">
+          <legend class="px-1 text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <input id="modal-pomeriggio-attiva" type="checkbox" class="rounded border-slate-300" /> Pomeriggio
+          </legend>
+          <div id="modal-pomeriggio-campi" class="space-y-2 mt-1">
+            <select id="modal-pomeriggio-reparto"
+                    class="w-full rounded border-slate-300 text-sm focus:border-slate-500 focus:ring-slate-500"></select>
+            <input id="modal-pomeriggio-orario" type="text" placeholder="es. 15:00-19:30"
+                   class="w-full rounded border-slate-300 text-sm focus:border-slate-500 focus:ring-slate-500" />
+            <label class="flex items-center gap-2 text-xs text-slate-600">
+              <input id="modal-pomeriggio-bloccato" type="checkbox" class="rounded border-slate-300" />
+              Blocca (non sovrascrivibile dall'algoritmo)
+            </label>
+          </div>
+        </fieldset>
+        <p id="modal-reparto-hint" class="hidden text-xs text-amber-600"></p>
 
         <div class="flex justify-between gap-2 pt-2">
           <button type="button" id="modal-delete-btn"
@@ -138,7 +152,7 @@
     }
   </style>
 
-  <script type="module" src="./js/nav.js?v=39"></script>
-  <script type="module" src="./js/calendario.js?v=39"></script>
+  <script type="module" src="./js/nav.js?v=40"></script>
+  <script type="module" src="./js/calendario.js?v=40"></script>
 </body>
 </html>
