@@ -23,7 +23,7 @@ import {
   writeBatch,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "./app.js?v=36";
+import { db } from "./app.js?v=37";
 
 export const MAX_REPARTI = 4;
 

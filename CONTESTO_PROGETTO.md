@@ -18,7 +18,7 @@ Ogni file `.js` è referenziato con `?v=N` sia nei tag `<script>` sia negli `imp
 sed -i 's/v=N/v=N+1/g' *.html js/*.js
 ```
 
-**Versione corrente: v=36.** Verificare sempre con `grep -oh "v=[0-9]*" *.html js/*.js | sort -u` che sia un unico numero coerente prima di pushare.
+**Versione corrente: v=37.** Verificare sempre con `grep -oh "v=[0-9]*" *.html js/*.js | sort -u` che sia un unico numero coerente prima di pushare.
 
 ## Pagine e file JS (uno-a-uno)
 

@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=36";
+import { requireSession } from "./auth.js?v=37";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,8 +17,8 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=36";
-import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=36";
+} from "./data.js?v=37";
+import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=37";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -454,7 +454,37 @@ async function renderGiorno() {
     return;
   }
 
-  const cards = dipendenti
+  // Ordina i dipendenti:
+  // 1. Chi lavora (ordinato per nome reparto alfabetico)
+  // 2. Chi è in ferie / permesso
+  // 3. Chi non ha turno
+  const sortedDipendenti = [...dipendenti].sort((a, b) => {
+    const aInFerie = isInFerie(a.id, iso, cache.ferie);
+    const bInFerie = isInFerie(b.id, iso, cache.ferie);
+    const aTurno = cache.turni[turnoKey(a.id, iso)];
+    const bTurno = cache.turni[turnoKey(b.id, iso)];
+
+    const aCat = aTurno ? 0 : (aInFerie ? 1 : 2);
+    const bCat = bTurno ? 0 : (bInFerie ? 1 : 2);
+
+    if (aCat !== bCat) {
+      return aCat - bCat;
+    }
+
+    if (aCat === 0) {
+      const aRep = aTurno.reparto || "";
+      const bRep = bTurno.reparto || "";
+      if (aRep !== bRep) {
+        return aRep.localeCompare(bRep);
+      }
+    }
+
+    const aFull = `${a.cognome} ${a.nome}`.toLowerCase();
+    const bFull = `${b.cognome} ${b.nome}`.toLowerCase();
+    return aFull.localeCompare(bFull);
+  });
+
+  const cards = sortedDipendenti
     .map((dip) => {
       const inFerie = isInFerie(dip.id, iso, cache.ferie);
       const turno = cache.turni[turnoKey(dip.id, iso)];
@@ -470,9 +500,9 @@ async function renderGiorno() {
       if (inFerie) {
         leftBorderColor = "#fb923c"; // orange-400
         statusHtml = `
-          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-50 text-orange-800 border border-orange-200 transition-opacity ${dimClass}">
-            <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-            Ferie / Permesso
+          <div class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-orange-50 text-orange-800 border border-orange-200 transition-opacity ${dimClass}">
+            <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+            Ferie/Permesso
           </div>
         `;
       } else if (turno) {
@@ -485,25 +515,25 @@ async function renderGiorno() {
         
         const badgeClass = `bg-white border ${TIPO_BORDER[turno.tipo]}`;
         statusHtml = `
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass} transition-opacity ${dimClass}">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass} transition-opacity ${dimClass}">
               ${turno.bloccato ? "🔒 " : ""}${TIPO_LABEL[turno.tipo]}
             </span>
-            ${turno.orario ? `<span class="text-sm font-semibold text-slate-700 transition-opacity ${dimClass}">${turno.orario}</span>` : ""}
+            ${turno.orario ? `<span class="text-xs font-semibold text-slate-700 transition-opacity ${dimClass}">${turno.orario}</span>` : ""}
           </div>
         `;
       } else {
         statusHtml = `
-          <span class="text-xs font-medium text-slate-400 transition-opacity ${dimClass} italic bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
+          <span class="text-[10px] font-medium text-slate-400 transition-opacity ${dimClass} italic bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
             Nessun turno
           </span>
         `;
       }
 
       const repartoBadge = reparto
-        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-700 border transition-opacity ${dimClass}"
+        ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-700 border transition-opacity ${dimClass}"
                 style="background:${reparto.colore}18; border-color:${reparto.colore}60;">
-            <span class="w-2 h-2 rounded-full inline-block" style="background:${reparto.colore}"></span>${reparto.nome}
+            <span class="w-1.5 h-1.5 rounded-full inline-block" style="background:${reparto.colore}"></span>${reparto.nome}
           </span>`
         : "";
 
@@ -514,18 +544,18 @@ async function renderGiorno() {
         : "bg-white";
 
       return `
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between min-h-[110px] transition-all duration-200 ${cardHoverClass} ${dimClass}"
+        <div class="bg-white rounded-lg border border-slate-200 shadow-sm p-3 flex flex-col justify-between min-h-[85px] transition-all duration-200 ${cardHoverClass} ${dimClass}"
              style="border-left: 5px solid ${leftBorderColor}"
              ${clickable ? `data-cell data-dipendente="${dip.id}" data-data="${iso}"` : ""}>
-          <div class="flex items-start justify-between gap-3">
+          <div class="flex items-start justify-between gap-2">
             <div>
-              <h4 class="font-bold text-slate-800 text-base leading-tight">${dip.nome} ${dip.cognome}</h4>
-              <p class="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-wider">${ruoloLabel}</p>
+              <h4 class="font-bold text-slate-800 text-sm leading-tight">${dip.nome} ${dip.cognome}</h4>
+              <p class="text-[9px] font-semibold text-slate-400 mt-0.5 uppercase tracking-wider">${ruoloLabel}</p>
             </div>
             ${repartoBadge}
           </div>
-          <div class="mt-4 flex items-center justify-between border-t border-slate-100/80 pt-3">
-            <span class="text-xs text-slate-400 font-medium">Orario turno:</span>
+          <div class="mt-2 flex items-center justify-between border-t border-slate-100/80 pt-2">
+            <span class="text-[11px] text-slate-400 font-medium">Orario turno:</span>
             ${statusHtml}
           </div>
         </div>
@@ -533,7 +563,7 @@ async function renderGiorno() {
     })
     .join("");
 
-  setContentHtml(`<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-2">${cards}</div>`);
+  setContentHtml(`<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-1">${cards}</div>`);
 
   attachCellHandlers();
 }
@@ -544,6 +574,11 @@ function attachCellHandlers() {
   if (!session.privileged) return; // sola lettura: nessuna modifica possibile
 
   content.querySelectorAll("[data-cell]").forEach((cell) => {
+    if (state.view === "giorno") {
+      cell.addEventListener("click", () => openModal(cell.dataset.dipendente, cell.dataset.data));
+      return;
+    }
+
     cell.addEventListener("dblclick", () => openModal(cell.dataset.dipendente, cell.dataset.data));
 
     const inner = cell.querySelector("[draggable]");
