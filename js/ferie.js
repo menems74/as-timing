@@ -1,5 +1,5 @@
-import { requireSession } from "./auth.js?v=38";
-import { getDipendenti, getFerie, addFerie, deleteFerie } from "./data.js?v=38";
+import { requireSession } from "./auth.js?v=39";
+import { getDipendenti, getFerie, addFerie, deleteFerie } from "./data.js?v=39";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");

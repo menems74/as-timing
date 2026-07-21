@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=38";
+import { requireSession } from "./auth.js?v=39";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,8 +17,8 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=38";
-import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=38";
+} from "./data.js?v=39";
+import { pianificaMese, analizzaMese, settimaneDelMese, SLOT_LABEL } from "./algoritmo.js?v=39";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -222,11 +222,16 @@ function buildCellaHtml(dipendenteId, dataISO) {
     borderClass = "border-[1.5px]";
   }
 
-  const fillStyle = `background-color: ${repColore};`;
-  const emptyStyle = `background-color: transparent;`;
+  const morningColor = "#0284c7"; // Azzurro Polvere
+  const afternoonColor = "#1e3a8a"; // Blu Navy
 
-  const leftSegmentStyle = (turno.tipo === "mattina" || turno.tipo === "giornata") ? fillStyle : emptyStyle;
-  const rightSegmentStyle = (turno.tipo === "pomeriggio" || turno.tipo === "giornata") ? fillStyle : emptyStyle;
+  const leftSegmentStyle = (turno.tipo === "mattina" || turno.tipo === "giornata")
+    ? `background-color: ${morningColor};`
+    : "background-color: transparent;";
+
+  const rightSegmentStyle = (turno.tipo === "pomeriggio" || turno.tipo === "giornata")
+    ? `background-color: ${afternoonColor};`
+    : "background-color: transparent;";
 
   const lockHtml = turno.bloccato ? `<span class="text-[9px] leading-none mb-0.5" title="Bloccato">🔒</span>` : "";
 
@@ -237,9 +242,9 @@ function buildCellaHtml(dipendenteId, dataISO) {
          draggable="${!!(session.privileged && !turno.bloccato)}">
       <div class="flex flex-col items-center justify-center w-full h-full gap-0.5">
         ${lockHtml}
-        <div class="w-8 h-2 rounded bg-black/10 p-[1px] flex gap-[1px]">
-          <div class="h-full w-1/2 rounded-l-sm" style="${leftSegmentStyle}"></div>
-          <div class="h-full w-1/2 rounded-r-sm" style="${rightSegmentStyle}"></div>
+        <div class="w-8 h-2.5 rounded-full bg-white border border-slate-200/80 p-[1px] flex gap-[1px]">
+          <div class="h-full w-1/2 rounded-l-full" style="${leftSegmentStyle}"></div>
+          <div class="h-full w-1/2 rounded-r-full" style="${rightSegmentStyle}"></div>
         </div>
       </div>
     </div>
