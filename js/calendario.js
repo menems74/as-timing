@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=40";
+import { requireSession } from "./auth.js?v=41";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,7 +17,7 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=40";
+} from "./data.js?v=41";
 import {
   pianificaMese,
   analizzaMese,
@@ -26,7 +26,7 @@ import {
   SLOT_LABEL,
   CAMPI_SLOT,
   slotAttivo,
-} from "./algoritmo.js?v=40";
+} from "./algoritmo.js?v=41";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -839,16 +839,31 @@ function formatISO(iso) {
   return iso.split("-").reverse().join("/");
 }
 
-function sezioneReport(titolo, righe, colore) {
+function sezioneReport(titolo, righe, colore, collassabile = false) {
   if (righe.length === 0) return "";
   const palette = {
     rosso: "bg-red-50 border-red-200 text-red-800",
     ambra: "bg-amber-50 border-amber-200 text-amber-800",
   }[colore];
+  const lista = `<ul class="list-disc list-inside space-y-0.5">${righe.map((r) => `<li>${r}</li>`).join("")}</ul>`;
+
+  if (collassabile) {
+    // Chiusa di default: la freccia ruota di 90° quando <details> è aperto (:open).
+    return `
+      <details class="rounded-lg border p-3 ${palette} group">
+        <summary class="font-semibold cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden flex items-center gap-2">
+          <span class="inline-block transition-transform group-open:rotate-90">▶</span>
+          ${titolo} (${righe.length})
+        </summary>
+        <div class="mt-1.5">${lista}</div>
+      </details>
+    `;
+  }
+
   return `
     <div class="rounded-lg border p-3 ${palette}">
       <p class="font-semibold mb-1.5">${titolo} (${righe.length})</p>
-      <ul class="list-disc list-inside space-y-0.5">${righe.map((r) => `<li>${r}</li>`).join("")}</ul>
+      ${lista}
     </div>
   `;
 }
@@ -865,12 +880,14 @@ function mostraReport(r, sottotitolo) {
     sezioneReport(
       "Reparti con un solo dipendente",
       r.copertureSingole.map((c) => `${formatISO(c.dataISO)} ${SLOT_LABEL[c.slot]} — ${c.reparto}`),
-      "ambra"
+      "ambra",
+      true
     ),
     sezioneReport(
       "Sopra il monte ore contrattuale",
       r.oreSopra.map((v) => `${v.nome} — settimana del ${formatISO(v.settimana)}: ${v.ore}h su ${v.contratto}h`),
-      "ambra"
+      "ambra",
+      true
     ),
     sezioneReport(
       "Sotto il monte ore contrattuale",
