@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=42";
+import { requireSession } from "./auth.js?v=43";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,7 +17,7 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=42";
+} from "./data.js?v=43";
 import {
   pianificaMese,
   analizzaMese,
@@ -26,7 +26,7 @@ import {
   SLOT_LABEL,
   CAMPI_SLOT,
   slotAttivo,
-} from "./algoritmo.js?v=42";
+} from "./algoritmo.js?v=43";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -885,7 +885,9 @@ function mostraReport(r, sottotitolo) {
     ),
     sezioneReport(
       "Sopra il monte ore contrattuale",
-      r.oreSopra.map((v) => `${v.nome} — settimana del ${formatISO(v.settimana)}: ${v.ore}h su ${v.contratto}h`),
+      [...r.oreSopra]
+        .sort((a, b) => a.nome.localeCompare(b.nome, "it") || a.settimana.localeCompare(b.settimana))
+        .map((v) => `${v.nome} — settimana del ${formatISO(v.settimana)}: ${v.ore}h su ${v.contratto}h`),
       "ambra",
       true
     ),
