@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=43";
+import { requireSession } from "./auth.js?v=44";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,7 +17,7 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=43";
+} from "./data.js?v=44";
 import {
   pianificaMese,
   analizzaMese,
@@ -26,7 +26,7 @@ import {
   SLOT_LABEL,
   CAMPI_SLOT,
   slotAttivo,
-} from "./algoritmo.js?v=43";
+} from "./algoritmo.js?v=44";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");
@@ -243,7 +243,7 @@ function buildCellaHtml(dipendenteId, dataISO) {
            style="${style}" title="${title}" data-slot="${slot}"
            draggable="${!!(session.privileged && !bloccato)}">
         ${lockIcon}
-        <span class="text-[9px] font-semibold text-slate-600 truncate max-w-full px-0.5 leading-none">${repNome.slice(0, 4)}</span>
+        <span class="text-[9px] font-semibold text-slate-600 truncate max-w-full px-0.5 leading-none">${repNome.charAt(0).toUpperCase()}</span>
       </div>
     `;
   };

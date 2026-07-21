@@ -1,10 +1,10 @@
-import { requireSession } from "./auth.js?v=43";
+import { requireSession } from "./auth.js?v=44";
 import {
   contaTurniFinoA,
   eliminaTurniFinoA,
   contaTurniMeseCorrente,
   eliminaTurniMeseCorrente,
-} from "./data.js?v=43";
+} from "./data.js?v=44";
 
 const session = await requireSession({ requirePrivileged: true });
 if (!session) throw new Error("redirect");
