@@ -1,4 +1,4 @@
-import { requireSession } from "./auth.js?v=41";
+import { requireSession } from "./auth.js?v=42";
 import {
   getDipendenti,
   getDipendentiTurnabili,
@@ -17,7 +17,7 @@ import {
   isGiornoChiusura,
   getImpostazioni,
   applicaPianificazione,
-} from "./data.js?v=41";
+} from "./data.js?v=42";
 import {
   pianificaMese,
   analizzaMese,
@@ -26,7 +26,7 @@ import {
   SLOT_LABEL,
   CAMPI_SLOT,
   slotAttivo,
-} from "./algoritmo.js?v=41";
+} from "./algoritmo.js?v=42";
 
 const session = await requireSession({ requirePrivileged: false });
 if (!session) throw new Error("redirect");

@@ -381,8 +381,12 @@ function generaReport({ settimane, giorniISO, reparti, staff, oreTurno, giornoCh
       for (const slot of SLOTS) {
         for (const rep of reparti) {
           const cov = copertura(iso, slot, rep.nome);
+          const minimo = rep.coperturaMinima ?? 1;
           if (cov === 0) copertureAssenti.push({ dataISO: iso, slot, reparto: rep.nome });
-          else if (cov === 1) copertureSingole.push({ dataISO: iso, slot, reparto: rep.nome });
+          // Un solo dipendente è un rischio (nessun backup) solo se il reparto è
+          // configurato per averne di più: se la copertura minima è 1, un solo
+          // dipendente è esattamente il funzionamento previsto, non un'anomalia.
+          else if (cov === 1 && minimo > 1) copertureSingole.push({ dataISO: iso, slot, reparto: rep.nome });
         }
       }
     }
